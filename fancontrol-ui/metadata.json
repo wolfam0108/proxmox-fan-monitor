@@ -1,0 +1,4 @@
+{
+  "name": "FanControl UI",
+  "description": "A lightweight, dark-mode dashboard for monitoring system temperatures, fan speeds, and control logic states based on your custom Python utility."
+}

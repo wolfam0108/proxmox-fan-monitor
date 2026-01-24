@@ -1,0 +1,15 @@
+[Unit]
+Description=Fan Control Daemon with Web UI
+After=network.target headless-x.service
+Wants=headless-x.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /root/monitor/fan_control.py
+WorkingDirectory=/root/monitor
+Environment="DISPLAY=:0"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

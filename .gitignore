@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+fancontrol-ui/node_modules/
+
+# Build output
+fancontrol-ui/dist/
+
+# Runtime config (contains local settings)
+fan_config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+*.log
+/var/log/fan_control/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Grafana (removed)
+grafana_dashboard.json
