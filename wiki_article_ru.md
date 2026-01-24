@@ -58,9 +58,114 @@
 
 ----
 
-== 4. Установка ==
+== 4. Как получить данные для управления ==
 
-=== 4.1 Исходный код ===
+Прежде чем писать скрипт, нужно разобраться какие данные доступны и как их читать.
+
+=== 4.1 Системные датчики (sensors) ===
+После установки драйвера IT87 данные доступны через <code>sensors</code>:
+
+<syntaxhighlight lang="bash">
+apt install lm-sensors
+sensors
+</syntaxhighlight>
+
+'''Пример вывода:'''
+<syntaxhighlight lang="text">
+it8792-isa-0a60
+Adapter: ISA adapter
+in0:           1.78 V  
+in1:           1.81 V  
++3.3V:         3.31 V  
+in3:           1.02 V  
+in4:           1.81 V  
+in5:           1.22 V  
+in6:           1.18 V  
+3VSB:          3.31 V  
+Vbat:          3.07 V  
+fan1:        1168 RPM
+fan2:        1166 RPM
+fan3:           0 RPM
+temp1:        +48.0°C  
+temp2:        +35.0°C  
+temp3:        +36.0°C  
+intrusion0:  ALARM
+</syntaxhighlight>
+
+=== 4.2 Путь к PWM файлам ===
+Для управления вентиляторами нужно найти PWM файлы в sysfs:
+
+<syntaxhighlight lang="bash">
+find /sys/devices -name 'pwm*' 2>/dev/null | head -20
+</syntaxhighlight>
+
+'''Типичный путь:'''
+<syntaxhighlight lang="text">
+/sys/devices/platform/it87.2656/hwmon/hwmon4/pwm1
+/sys/devices/platform/it87.2656/hwmon/hwmon4/pwm2
+</syntaxhighlight>
+
+'''Включение ручного управления:'''
+<syntaxhighlight lang="bash">
+# Переключить в ручной режим (1 = manual)
+echo 1 > /sys/devices/platform/it87.2656/hwmon/hwmon4/pwm2_enable
+
+# Установить PWM (0-255)
+echo 150 > /sys/devices/platform/it87.2656/hwmon/hwmon4/pwm2
+
+# Прочитать текущие обороты
+cat /sys/devices/platform/it87.2656/hwmon/hwmon4/fan2_input
+</syntaxhighlight>
+
+=== 4.3 Температура CPU ===
+<syntaxhighlight lang="bash">
+# Через sensors (k10temp для AMD)
+sensors | grep -A5 k10temp
+
+# Напрямую через sysfs
+cat /sys/class/hwmon/hwmon*/temp1_input  # Значение в мили-градусах (45000 = 45°C)
+</syntaxhighlight>
+
+=== 4.4 Температура GPU (NVIDIA) ===
+<syntaxhighlight lang="bash">
+# Через nvidia-smi (всегда работает)
+nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits
+
+# Через nvidia-settings (требует DISPLAY)
+DISPLAY=:0 nvidia-settings -q GPUCoreTemp -t
+</syntaxhighlight>
+
+=== 4.5 Управление вентиляторами GPU ===
+'''Требуется Coolbits=4 и запущенный X Server!'''
+
+<syntaxhighlight lang="bash">
+# Включить ручное управление (GPUFanControlState=1)
+DISPLAY=:0 nvidia-settings -a "[gpu:0]/GPUFanControlState=1"
+
+# Установить скорость (0-100%)
+DISPLAY=:0 nvidia-settings -a "[fan:0]/GPUTargetFanSpeed=60"
+DISPLAY=:0 nvidia-settings -a "[fan:1]/GPUTargetFanSpeed=60"
+
+# Вернуть автоматику (GPUFanControlState=0)
+DISPLAY=:0 nvidia-settings -a "[gpu:0]/GPUFanControlState=0"
+</syntaxhighlight>
+
+=== 4.6 Температура HDD ===
+<syntaxhighlight lang="bash">
+apt install hddtemp smartmontools
+
+# Через hddtemp
+hddtemp /dev/sd?
+
+# Через smartctl (более надёжно)
+smartctl -A /dev/sda | grep Temperature
+</syntaxhighlight>
+
+----
+
+== 5. Установка ==
+
+=== 5.1 Исходный код ===
 Все исходные файлы доступны в репозитории GitHub:
 
 '''Репозиторий: [https://github.com/wolfam0108/proxmox-fan-monitor https://github.com/wolfam0108/proxmox-fan-monitor]'''
@@ -71,7 +176,7 @@ git clone https://github.com/wolfam0108/proxmox-fan-monitor.git monitor
 cd monitor
 </syntaxhighlight>
 
-=== 4.2 Драйвер IT87 ===
+=== 5.2 Драйвер IT87 ===
 Используем форк драйвера от [https://github.com/frankcrawford/it87 Frank Crawford].
 
 '''Установка зависимостей:'''
@@ -107,14 +212,14 @@ echo "it87" >> /etc/modules
 
 ----
 
-== 5. Настройка GPU (Headless X) ==
+== 6. Настройка GPU (Headless X) ==
 
-=== 5.1 Установка X и утилит ===
+=== 6.1 Установка X и утилит ===
 <syntaxhighlight lang="bash">
 apt install -y xserver-xorg xinit libgtk-3-0
 </syntaxhighlight>
 
-=== 5.2 Конфигурация Xorg ===
+=== 6.2 Конфигурация Xorg ===
 '''Файл: /etc/X11/xorg.conf'''
 <syntaxhighlight lang="text">
 Section "Device"
@@ -137,7 +242,7 @@ Section "Screen"
 EndSection
 </syntaxhighlight>
 
-=== 5.3 Сервис для Headless X ===
+=== 6.3 Сервис для Headless X ===
 '''Файл: /etc/systemd/system/headless-x.service'''
 <syntaxhighlight lang="ini">
 [Unit]
@@ -155,15 +260,15 @@ WantedBy=multi-user.target
 
 ----
 
-== 6. Установка веб-интерфейса ==
+== 7. Установка веб-интерфейса ==
 
-=== 6.1 Установка Node.js ===
+=== 7.1 Установка Node.js ===
 <syntaxhighlight lang="bash">
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
 </syntaxhighlight>
 
-=== 6.2 Сборка UI ===
+=== 7.2 Сборка UI ===
 <syntaxhighlight lang="bash">
 cd /root/monitor/fancontrol-ui
 npm install
@@ -174,9 +279,9 @@ npm run build
 
 ----
 
-== 7. Настройка автозапуска ==
+== 8. Настройка автозапуска ==
 
-=== 7.1 Файл сервиса ===
+=== 8.1 Файл сервиса ===
 '''Файл: /etc/systemd/system/fan-control.service'''
 <syntaxhighlight lang="ini">
 [Unit]
@@ -196,7 +301,7 @@ RestartSec=5
 WantedBy=multi-user.target
 </syntaxhighlight>
 
-=== 7.2 Активация ===
+=== 8.2 Активация ===
 <syntaxhighlight lang="bash">
 # Копирование сервисов
 cp /root/monitor/fan-control.service /etc/systemd/system/
@@ -209,34 +314,34 @@ systemctl start headless-x.service
 systemctl start fan-control.service
 </syntaxhighlight>
 
-=== 7.3 Доступ к веб-интерфейсу ===
+=== 8.3 Доступ к веб-интерфейсу ===
 После запуска сервиса откройте в браузере:
 
 '''http://IP_ВАШЕГО_СЕРВЕРА:8080'''
 
 ----
 
-== 8. Использование ==
+== 9. Использование ==
 
-=== 8.1 Вкладка "Панель" ===
+=== 9.1 Вкладка "Панель" ===
 * Карточки с температурами CPU, GPU, HDD
 * Статус логики управления (режим, цель, статус)
 * Кнопка АВТО/РУЧНОЙ для переключения режима
 * В ручном режиме — кнопки выбора режима (Р1, Р2, Р3)
 * Список вентиляторов с текущими оборотами
 
-=== 8.2 Вкладка "Графики" ===
+=== 9.2 Вкладка "Графики" ===
 * Выбор временного диапазона (1м — 1мес)
 * График температур CPU/GPU/HDD
 * График режимов системы и GPU
 
-=== 8.3 Вкладка "Настройки" ===
+=== 9.3 Вкладка "Настройки" ===
 * Редактирование целевых оборотов для каждого режима
 * Редактирование порогов переключения
 * Кнопка "Сохранить" — только запись в конфиг
 * Кнопка "Сохранить и применить" — запись + перезапуск демона
 
-=== 8.4 Проверка через консоль ===
+=== 9.4 Проверка через консоль ===
 <syntaxhighlight lang="bash">
 # Логи сервиса
 journalctl -u fan-control -f
@@ -253,7 +358,7 @@ curl http://localhost:8080/api/status
 
 ----
 
-== 9. Конфигурация ==
+== 10. Конфигурация ==
 
 Файл <code>fan_config.json</code> создается автоматически при первом запуске. Можно редактировать вручную или через веб-интерфейс.
 
@@ -289,7 +394,7 @@ curl http://localhost:8080/api/status
 
 ----
 
-== 10. Ссылки ==
+== 11. Ссылки ==
 
 * '''Репозиторий проекта:''' [https://github.com/wolfam0108/proxmox-fan-monitor https://github.com/wolfam0108/proxmox-fan-monitor]
 * '''Драйвер IT87:''' [https://github.com/frankcrawford/it87 https://github.com/frankcrawford/it87]
