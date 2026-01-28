@@ -9,7 +9,8 @@ import {
   Zap,
   LayoutDashboard,
   LineChart,
-  Settings
+  Settings,
+  X
 } from 'lucide-react';
 
 export {
@@ -22,5 +23,6 @@ export {
   Zap,
   LayoutDashboard,
   LineChart,
-  Settings
+  Settings,
+  X
 };

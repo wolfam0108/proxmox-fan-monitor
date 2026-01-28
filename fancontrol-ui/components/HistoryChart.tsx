@@ -1,6 +1,7 @@
-import React from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts';
+import React, { useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { ChartDataPoint, TimeRange } from '../types';
+import { CHART_COLORS } from '../theme';
 
 interface HistoryChartProps {
   data: ChartDataPoint[];
@@ -19,43 +20,61 @@ const RANGE_OPTIONS: { key: TimeRange; label: string }[] = [
   { key: '1mo', label: '1 мес' },
 ];
 
-const MODE_COLORS = {
-  sys: ['#22c55e', '#eab308', '#ef4444'], // Mode 1, 2, 3
-  gpu: ['#3b82f6', '#06b6d4', '#22c55e', '#eab308', '#ef4444'], // Mode 0-4
+const getColor = (str: string, offset = 0) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash + offset) % CHART_COLORS.length;
+  return CHART_COLORS[index];
 };
 
 export const HistoryChart: React.FC<HistoryChartProps> = ({ data, selectedRange, onRangeChange }) => {
-  // Calculate mode background regions
-  const getModeRegions = () => {
-    if (data.length === 0) return { sys: [], gpu: [] };
 
-    const sysRegions: { start: number; end: number; mode: number }[] = [];
-    const gpuRegions: { start: number; end: number; mode: number }[] = [];
+  // Flatten data for Recharts and extract dynamic keys
+  const { chartData, sensorKeys, logicKeys } = useMemo(() => {
+    const sKeys = new Set<string>();
+    const lKeys = new Set<string>(); // { id: string, name: string } ideally, but just ID for now
 
-    let lastSysMode = data[0]?.sysMode || 1;
-    let lastGpuMode = data[0]?.gpuMode || 0;
-    let sysStart = 0;
-    let gpuStart = 0;
+    const flattened = data.map(d => {
+      const flat: any = { time: d.time };
 
-    data.forEach((d, i) => {
-      if (d.sysMode !== lastSysMode) {
-        sysRegions.push({ start: sysStart, end: i, mode: lastSysMode });
-        sysStart = i;
-        lastSysMode = d.sysMode;
+      // Flatten Sensors
+      if (d.sensors && d.sensors.length > 0) {
+        d.sensors.forEach(s => {
+          flat[`sensor_${s.id}`] = s.value;
+          sKeys.add(s.id);
+        });
+      } else {
+        // Legacy Fallback
+        if (d.cpu) { flat['sensor_cpu'] = d.cpu; sKeys.add('cpu'); }
+        if (d.gpu) { flat['sensor_gpu'] = d.gpu; sKeys.add('gpu'); }
       }
-      if (d.gpuMode !== lastGpuMode) {
-        gpuRegions.push({ start: gpuStart, end: i, mode: lastGpuMode });
-        gpuStart = i;
-        lastGpuMode = d.gpuMode;
+
+      // Flatten Logic Modes
+      if (d.logic) {
+        Object.entries(d.logic).forEach(([k, v]: [string, any]) => {
+          // v is LogicState object { mode, ... }
+          flat[`mode_${k}`] = v?.mode !== undefined ? v.mode : v;
+          lKeys.add(k);
+        });
+      } else {
+        // Legacy fallback
+        if (d.sysMode !== undefined) { flat['mode_sys'] = d.sysMode; lKeys.add('sys'); }
+        if (d.gpuMode !== undefined) { flat['mode_gpu'] = d.gpuMode; lKeys.add('gpu'); }
       }
+
+      return flat;
     });
 
-    // Add final regions
-    sysRegions.push({ start: sysStart, end: data.length - 1, mode: lastSysMode });
-    gpuRegions.push({ start: gpuStart, end: data.length - 1, mode: lastGpuMode });
+    return {
+      chartData: flattened,
+      sensorKeys: Array.from(sKeys),
+      logicKeys: Array.from(lKeys)
+    };
+  }, [data]);
 
-    return { sys: sysRegions, gpu: gpuRegions };
-  };
+  const hasData = sensorKeys.length > 0 || logicKeys.length > 0;
 
   return (
     <div className="space-y-4">
@@ -75,110 +94,85 @@ export const HistoryChart: React.FC<HistoryChartProps> = ({ data, selectedRange,
         ))}
       </div>
 
-      {/* Mode Indicators */}
-      <div className="flex gap-6 text-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">Система:</span>
-          <span className="text-slate-300">Режим {data[data.length - 1]?.sysMode || '-'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">GPU:</span>
-          <span className="text-slate-300">Режим {data[data.length - 1]?.gpuMode || '-'}</span>
-        </div>
-      </div>
-
       {/* Chart */}
-      <div className="h-[350px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-            <XAxis
-              dataKey="time"
-              stroke="#94a3b8"
-              fontSize={11}
-              tickMargin={10}
-              tick={{ fill: '#94a3b8' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              yAxisId="temp"
-              stroke="#94a3b8"
-              fontSize={12}
-              tick={{ fill: '#94a3b8' }}
-              domain={[20, 'auto']}
-              label={{ value: '°C', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
-            />
-            <YAxis
-              yAxisId="mode"
-              orientation="right"
-              stroke="#64748b"
-              fontSize={11}
-              tick={{ fill: '#64748b' }}
-              domain={[0, 4]}
-              label={{ value: 'Режим', angle: 90, position: 'insideRight', fill: '#64748b' }}
-            />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f1f5f9' }}
-              itemStyle={{ color: '#e2e8f0' }}
-              labelStyle={{ color: '#94a3b8', marginBottom: '0.5rem' }}
-            />
-            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+      <div className="h-[350px] w-full relative">
+        {!hasData ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-900/20 rounded-lg border border-slate-800 border-dashed">
+            <div className="text-4xl mb-2">📉</div>
+            <p className="text-lg font-medium">Нет доступных метрик</p>
+            <p className="text-sm">Нет данных для построения графика</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+              <XAxis
+                dataKey="time"
+                stroke="#94a3b8"
+                fontSize={11}
+                tickMargin={10}
+                tick={{ fill: '#94a3b8' }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                yAxisId="temp"
+                stroke="#94a3b8"
+                fontSize={12}
+                tick={{ fill: '#94a3b8' }}
+                domain={['auto', 'auto']}
+                label={{ value: '°C', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+              />
+              {logicKeys.length > 0 && (
+                <YAxis
+                  yAxisId="mode"
+                  orientation="right"
+                  stroke="#64748b"
+                  fontSize={11}
+                  tick={{ fill: '#64748b' }}
+                  domain={[0, 4]} // Assuming modes 0-4
+                  allowDecimals={false}
+                  label={{ value: 'Режим', angle: 90, position: 'insideRight', fill: '#64748b' }}
+                />
+              )}
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f1f5f9' }}
+                itemStyle={{ color: '#e2e8f0' }}
+                labelStyle={{ color: '#94a3b8', marginBottom: '0.5rem' }}
+              />
+              <Legend wrapperStyle={{ paddingTop: '10px' }} />
 
-            {/* Temperature Lines */}
-            <Line
-              yAxisId="temp"
-              type="monotone"
-              dataKey="cpu"
-              name="CPU"
-              stroke="#f87171"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="temp"
-              type="monotone"
-              dataKey="gpu"
-              name="GPU"
-              stroke="#34d399"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="temp"
-              type="monotone"
-              dataKey="hdd"
-              name="HDD"
-              stroke="#60a5fa"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4 }}
-            />
+              {/* Render Sensor Lines */}
+              {sensorKeys.map((key, idx) => (
+                <Line
+                  key={`sensor-${key}`}
+                  yAxisId="temp"
+                  type="monotone"
+                  dataKey={`sensor_${key}`}
+                  name={key.toUpperCase()}
+                  stroke={getColor(key)}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              ))}
 
-            {/* Mode Lines */}
-            <Line
-              yAxisId="mode"
-              type="stepAfter"
-              dataKey="sysMode"
-              name="Система"
-              stroke="#a855f7"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-            />
-            <Line
-              yAxisId="mode"
-              type="stepAfter"
-              dataKey="gpuMode"
-              name="GPU режим"
-              stroke="#f97316"
-              strokeWidth={2}
-              strokeDasharray="3 3"
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+              {/* Render Mode Lines */}
+              {logicKeys.map((key, idx) => (
+                <Line
+                  key={`mode-${key}`}
+                  yAxisId="mode"
+                  type="stepAfter"
+                  dataKey={`mode_${key}`}
+                  name={`${key.toUpperCase()} Режим`}
+                  stroke={getColor(key, 5)} // Offset color to distinct from temp
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                  dot={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,308 @@
+{
+  "fan_groups": [
+    {
+      "id": "cpu",
+      "name": "CPU",
+      "type": "system",
+      "temp_sources": [
+        "cpu"
+      ],
+      "fans": [
+        {
+          "name": "fan2",
+          "fan_input": "/sys/class/hwmon/hwmon3/fan2_input",
+          "pwm_path": "/sys/class/hwmon/hwmon3/pwm2",
+          "fan_id": "fan2",
+          "pwm_id": "pwm2"
+        }
+      ],
+      "profiles": [
+        {
+          "name": "Тихий",
+          "target": 1200,
+          "thresholds": {
+            "cpu": 50
+          }
+        },
+        {
+          "name": "Режим 4",
+          "target": 1400,
+          "thresholds": {
+            "cpu": 55,
+            "gpu": null,
+            "hdd": null
+          }
+        },
+        {
+          "name": "Стандарт",
+          "target": 1600,
+          "thresholds": {
+            "cpu": 60
+          }
+        },
+        {
+          "name": "Режим 5",
+          "target": 1800,
+          "thresholds": {
+            "cpu": 65,
+            "gpu": null,
+            "hdd": null
+          }
+        },
+        {
+          "name": "Максимум",
+          "target": 2000,
+          "thresholds": {
+            "cpu": 70
+          }
+        }
+      ],
+      "delay_up": 5,
+      "hold_time": 30
+    },
+    {
+      "id": "group-1769286873516",
+      "name": "Корпус",
+      "type": "system",
+      "temp_sources": [
+        "cpu",
+        "hdd",
+        "gpu"
+      ],
+      "fans": [
+        {
+          "name": "fan3",
+          "fan_input": "/sys/class/hwmon/hwmon3/fan3_input",
+          "pwm_path": "/sys/class/hwmon/hwmon3/pwm3",
+          "fan_id": "fan3",
+          "pwm_id": "pwm3"
+        }
+      ],
+      "profiles": [
+        {
+          "name": "Тихий",
+          "target": 1200,
+          "thresholds": {
+            "cpu": 50,
+            "gpu": 60,
+            "hdd": 36
+          }
+        },
+        {
+          "name": "Режим 4",
+          "target": 1400,
+          "thresholds": {
+            "cpu": 55,
+            "gpu": 65,
+            "hdd": 38
+          }
+        },
+        {
+          "name": "Стандарт",
+          "target": 1600,
+          "thresholds": {
+            "cpu": 60,
+            "gpu": 70,
+            "hdd": 40
+          }
+        },
+        {
+          "name": "Режим 5",
+          "target": 1800,
+          "thresholds": {
+            "cpu": 65,
+            "gpu": 75,
+            "hdd": 42
+          }
+        },
+        {
+          "name": "Максимум",
+          "target": 2000,
+          "thresholds": {
+            "cpu": 70,
+            "gpu": 80,
+            "hdd": 46
+          }
+        }
+      ],
+      "delay_up": 5,
+      "hold_time": 30
+    },
+    {
+      "id": "gpu",
+      "name": "GPU",
+      "type": "nvidia",
+      "temp_sources": [
+        "gpu"
+      ],
+      "fans": [],
+      "gpu_config": {
+        "display": ":0",
+        "gpu_index": 0,
+        "fans": [
+          0,
+          1
+        ]
+      },
+      "profiles": [
+        {
+          "name": "Авто",
+          "target": 0,
+          "thresholds": {
+            "gpu": null
+          }
+        },
+        {
+          "name": "45%",
+          "target": 45,
+          "thresholds": {
+            "gpu": 58
+          }
+        },
+        {
+          "name": "50%",
+          "target": 50,
+          "thresholds": {
+            "gpu": 70
+          }
+        },
+        {
+          "name": "60%",
+          "target": 60,
+          "thresholds": {
+            "gpu": 74
+          }
+        },
+        {
+          "name": "70%",
+          "target": 70,
+          "thresholds": {
+            "gpu": 76
+          }
+        },
+        {
+          "name": "85%",
+          "target": 85,
+          "thresholds": {
+            "gpu": 79
+          }
+        },
+        {
+          "name": "Максимум",
+          "target": 100,
+          "thresholds": {
+            "gpu": 82
+          }
+        }
+      ],
+      "delay_up": 5,
+      "hold_time": 30
+    }
+  ],
+  "override": {
+    "cpu": {
+      "enabled": false,
+      "mode": 2
+    },
+    "group-1769286873516": {
+      "enabled": false,
+      "mode": 0
+    },
+    "gpu": {
+      "enabled": false,
+      "mode": 0
+    }
+  },
+  "drives": {
+    "monitored": [
+      "60C0A07XF95G",
+      "5QG2XSRF",
+      "59D0A12KF95G",
+      "5PKL40LE",
+      "5QG30SMF",
+      "5PKN38XB",
+      "5QG320RF",
+      "6290A1PMFBXG",
+      "5PGM8D6F",
+      "5PKL1YYE",
+      "5PKN61AB",
+      "2050A07PF95G"
+    ]
+  },
+  "gpu": {
+    "profiles": [
+      {
+        "name": "Авто",
+        "target": 0,
+        "thresholds": {
+          "gpu": null
+        }
+      },
+      {
+        "name": "45%",
+        "target": 45,
+        "thresholds": {
+          "gpu": 58
+        }
+      },
+      {
+        "name": "50%",
+        "target": 50,
+        "thresholds": {
+          "gpu": 70
+        }
+      },
+      {
+        "name": "60%",
+        "target": 60,
+        "thresholds": {
+          "gpu": 74
+        }
+      },
+      {
+        "name": "70%",
+        "target": 70,
+        "thresholds": {
+          "gpu": 76
+        }
+      },
+      {
+        "name": "85%",
+        "target": 85,
+        "thresholds": {
+          "gpu": 79
+        }
+      },
+      {
+        "name": "Максимум",
+        "target": 100,
+        "thresholds": {
+          "gpu": 82
+        }
+      }
+    ],
+    "delay_up": 5,
+    "hold_time": 30
+  },
+  "system": {
+    "profiles": [
+      {
+        "name": "Тихий",
+        "target": 1200,
+        "thresholds": {}
+      },
+      {
+        "name": "Стандарт",
+        "target": 1600,
+        "thresholds": {}
+      },
+      {
+        "name": "Критический",
+        "target": 2000,
+        "thresholds": {}
+      }
+    ],
+    "delay_up": 5,
+    "hold_time": 30
+  }
+}

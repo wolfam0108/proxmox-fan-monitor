@@ -10,9 +10,8 @@ import {
   LineChart as LineChartIcon,
   Settings
 } from './components/Icons';
-import { StatCard } from './components/StatCard';
-import { LogicCard } from './components/LogicCard';
-import { FanList } from './components/FanList';
+import { SensorCard } from './components/SensorCard';
+import { FanGroupCard } from './components/FanGroupCard';
 import { HistoryChart } from './components/HistoryChart';
 import { SettingsPanel } from './components/SettingsPanel';
 
@@ -24,6 +23,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'settings'>('dashboard');
   const [selectedRange, setSelectedRange] = useState<TimeRange>('30m');
   const [historyLoading, setHistoryLoading] = useState(false);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,8 +40,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load configured drives on mount
+
+
   useEffect(() => {
-    if (activeTab === 'analytics') {
+    // Fetch history for both analytics (chart) and dashboard (sparklines)
+    if (activeTab === 'analytics' || activeTab === 'dashboard') {
       setHistoryLoading(true);
       fetchHistory(selectedRange).then(data => {
         setHistory(data);
@@ -53,7 +57,7 @@ export default function App() {
   }, [activeTab, selectedRange]);
 
   useEffect(() => {
-    if (activeTab !== 'analytics') return;
+    if (activeTab !== 'analytics' && activeTab !== 'dashboard') return;
 
     const interval = setInterval(() => {
       fetchHistory(selectedRange).then(data => {
@@ -127,65 +131,108 @@ export default function App() {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Top Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <StatCard
-                label="Температура CPU"
-                value={data.temps.cpu.toFixed(1)}
-                unit="°C"
-                icon={Cpu}
-                colorClass={getTempColor(data.temps.cpu, 62)}
-              />
-              <StatCard
-                label="Температура GPU"
-                value={data.temps.gpu}
-                unit="°C"
-                icon={Thermometer}
-                colorClass={getTempColor(data.temps.gpu, 82)}
-              />
-              <StatCard
-                label="Макс. HDD"
-                value={data.temps.hddMax}
-                unit="°C"
-                icon={HardDrive}
-                colorClass={getTempColor(data.temps.hddMax, 45)}
-                subValue={`Горячий: ${data.temps.hddList.find(h => h.temp === data.temps.hddMax)?.device || 'N/A'}`}
-              />
-            </div>
+            {/* Top Stats Row - Smart Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {data.sensors && data.sensors.map((sensor) => {
+                let Icon = Cpu;
+                let threshold = 60;
+                let colorClass = 'text-slate-500';
 
-            {/* Logic Controllers */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <LogicCard
-                title="Система"
-                data={data.logic.system}
-                type="SYS"
-              />
-              <LogicCard
-                title="GPU"
-                data={data.logic.gpu}
-                type="GPU"
-              />
-            </div>
+                // Determine styling and layout based on visual_preset
+                let spanClass = "col-span-1";
+                let internalGridCols = 1;
 
-            {/* Fans */}
-            <FanList fans={data.fans} />
+                switch (sensor.visual_preset) {
+                  case 'accelerator':
+                    Icon = Thermometer;
+                    threshold = 82;
+                    // GPU: Single column
+                    spanClass = "col-span-1";
+                    internalGridCols = 1;
+                    break;
+                  case 'storage':
+                    Icon = HardDrive;
+                    threshold = 45;
+                    // Storage: Full width
+                    spanClass = "col-span-1 md:col-span-3 lg:col-span-4";
+                    // Internal: 3 columns for extended cards
+                    internalGridCols = 3;
+                    break;
+                  case 'system':
+                  default:
+                    Icon = Cpu;
+                    threshold = 62;
+                    // CPU: 3 columns (3/4 width)
+                    spanClass = "col-span-1 md:col-span-2 lg:col-span-3";
+                    // Internal: 4 columns for compact sensors
+                    internalGridCols = 4;
+                    break;
+                }
 
-            {/* HDD Grid */}
-            <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
-              <h3 className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-3 flex items-center gap-2">
-                <HardDrive size={14} /> Дисковый массив
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {data.temps.hddList.map((hdd) => (
-                  <div key={hdd.device} className="bg-slate-800 rounded p-2 text-center border border-slate-700">
-                    <div className="text-xs text-slate-500 mb-1">{hdd.device}</div>
-                    <div className={`font-mono font-bold ${getTempColor(Number(hdd.temp), 45)}`}>
-                      {hdd.temp}°C
-                    </div>
+                if (sensor.value !== null) {
+                  colorClass = getTempColor(sensor.value, threshold);
+                }
+
+                return (
+                  <div key={sensor.id} className={spanClass}>
+                    <SensorCard
+                      id={sensor.id}
+                      label={sensor.name}
+                      value={sensor.value}
+                      unit={sensor.value !== null ? '°C' : ''}
+                      icon={Icon}
+                      colorClass={colorClass}
+                      variant={sensor.visual_preset as 'system' | 'accelerator' | 'storage'}
+                      sources={sensor.sources || []}
+                      gridCols={internalGridCols}
+                      history={history}
+                    />
                   </div>
-                ))}
-              </div>
+                );
+              })}
+
+              {/* Fallback if no sensors configured (should not happen in prod ideally) */}
+              {(!data.sensors || data.sensors.length === 0) && (
+                <div className="col-span-3 text-center py-4 text-slate-500 bg-slate-900/50 rounded-lg">
+                  <p>Датчики не настроены</p>
+                </div>
+              )}
             </div>
+
+            {/* Fan Group Cards - Full width cards for each group */}
+            <div className="space-y-4">
+              {Object.entries(data.logic || {}).map(([groupId, groupData]) => {
+                // Filter fans belonging to this group by groupId
+                const groupFans = data.fans.filter(fan => {
+                  if (groupId === 'gpu') return fan.type === 'GPU';
+                  return (fan as any).groupId === groupId;
+                });
+                // Use groupName from API if available, fallback to formatted groupId
+                const displayName = (groupData as any).groupName ||
+                  (groupId === 'gpu' ? 'GPU' : groupId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+                return (
+                  <FanGroupCard
+                    key={groupId}
+                    groupId={groupId}
+                    groupName={displayName}
+                    logic={groupData as any}
+                    fans={groupFans}
+                    type={groupId === 'gpu' ? 'nvidia' : 'system'}
+                  />
+                );
+              })}
+              {Object.keys(data.logic || {}).length === 0 && (
+                <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-xl border border-slate-800">
+                  <p className="text-lg">Нет настроенных групп вентиляторов</p>
+                  <p className="text-sm mt-2">Откройте Настройки → Настроить для создания группы</p>
+                </div>
+              )}
+            </div>
+
+
+
+
+
           </div>
         )}
 
@@ -220,6 +267,6 @@ export default function App() {
         )}
 
       </div>
-    </div>
+    </div >
   );
 }
