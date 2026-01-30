@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AllocatableFan, HwmonPwm, FanPwmMapping, TempSource, SensorData } from '../types';
 import { scanFans, testPwm } from '../services/apiService';
 import { Wind, Zap } from './Icons';
+import { useTranslation } from 'react-i18next';
 
 interface FanWizardProps {
     onComplete: (groupName: string, mappings: any[], tempSources: TempSource[]) => void;
@@ -18,6 +19,7 @@ interface LinkedPair {
 }
 
 export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, usedFanIds = [], sensors, existingGroup }) => {
+    const { t } = useTranslation();
     const [step, setStep] = useState<'scan' | 'link' | 'configure'>('scan');
     const [scannedFans, setScannedFans] = useState<AllocatableFan[]>([]);
     const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                 setStep('link');
             }
         }).catch(e => {
-            setError('Scan error: ' + e.message);
+            setError(t('wizard.scanError', { error: e.message }));
             setLoading(false);
         });
     }, []);
@@ -173,7 +175,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
             <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-slate-900 rounded-xl p-8 text-center">
                     <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-slate-400">Сканирование вентиляторов...</p>
+                    <p className="text-slate-400">{t('wizard.scan')}</p>
                 </div>
             </div>
         );
@@ -184,7 +186,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
             <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
                 <div className="bg-slate-900 rounded-xl p-8 text-center">
                     <p className="text-red-400 mb-4">{error}</p>
-                    <button onClick={onCancel} className="px-4 py-2 bg-slate-700 rounded-lg">Закрыть</button>
+                    <button onClick={onCancel} className="px-4 py-2 bg-slate-700 rounded-lg">{t('wizard.close')}</button>
                 </div>
             </div>
         );
@@ -197,12 +199,12 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                 <div className="p-4 border-b border-slate-700 flex items-center justify-between">
                     <div>
                         <h2 className="text-lg font-bold text-slate-100">
-                            {step === 'link' ? 'Связывание вентиляторов' : 'Настройка группы'}
+                            {step === 'link' ? t('wizard.headerLink') : t('wizard.headerConfig')}
                         </h2>
                         <p className="text-sm text-slate-500">
                             {step === 'link'
-                                ? 'Нажмите на вентилятор, затем на PWM для связывания'
-                                : 'Укажите имя группы и триггеры температур'}
+                                ? t('wizard.descLink')
+                                : t('wizard.descConfig')}
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -211,11 +213,11 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                 onClick={() => setStep('configure')}
                                 className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm"
                             >
-                                Далее →
+                                {t('wizard.next')}
                             </button>
                         )}
                         <button onClick={onCancel} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">
-                            Отмена
+                            {t('wizard.cancel')}
                         </button>
                     </div>
                 </div>
@@ -229,7 +231,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                 {/* Fans Column */}
                                 <div>
                                     <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
-                                        <Wind size={16} /> Доступные вентиляторы
+                                        <Wind size={16} /> {t('wizard.availableFans')}
                                     </h3>
                                     <div className="space-y-2 h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                         {availableFans.map(fan => (
@@ -258,7 +260,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                             </div>
                                         ))}
                                         {availableFans.length === 0 && (
-                                            <p className="text-slate-500 text-center py-4">Нет доступных вентиляторов</p>
+                                            <p className="text-slate-500 text-center py-4">{t('wizard.noFans')}</p>
                                         )}
                                     </div>
                                 </div>
@@ -266,13 +268,13 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                 {/* Configuration Column */}
                                 <div>
                                     <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
-                                        <Zap size={16} /> Настройка подключения
+                                        <Zap size={16} /> {t('wizard.setupConnection')}
                                     </h3>
                                     <div className="bg-slate-800/50 rounded-lg p-4 h-[400px] border border-slate-700/50">
                                         {!selectedFan ? (
                                             <div className="h-full flex flex-col items-center justify-center text-slate-500">
                                                 <Wind size={48} className="mb-4 opacity-20" />
-                                                <p>Выберите вентилятор слева</p>
+                                                <p>{t('wizard.selectFan')}</p>
                                             </div>
                                         ) : selectedFan.type === 'nvidia' ? (
                                             <div className="h-full flex flex-col items-center justify-center space-y-4">
@@ -280,22 +282,22 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                                     <div className="inline-block p-3 bg-green-900/30 rounded-full mb-3">
                                                         <Zap size={32} className="text-green-400" />
                                                     </div>
-                                                    <h4 className="text-white font-medium mb-1">NVIDIA GPU Fan</h4>
-                                                    <p className="text-sm text-slate-400">Управляется драйвером автоматически</p>
+                                                    <h4 className="text-white font-medium mb-1">{t('wizard.nvidiaFan')}</h4>
+                                                    <p className="text-sm text-slate-400">{t('wizard.nvidiaDesc')}</p>
                                                 </div>
                                                 <button
                                                     onClick={() => handleAddGpuFan(selectedFan)}
                                                     className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors"
                                                 >
-                                                    Добавить в группу
+                                                    {t('wizard.addToGroup')}
                                                 </button>
                                             </div>
                                         ) : (
                                             <div className="space-y-4 h-full flex flex-col">
                                                 <div>
-                                                    <h4 className="text-sm text-slate-300 mb-2">Выберите PWM контроллер:</h4>
+                                                    <h4 className="text-sm text-slate-300 mb-2">{t('wizard.selectPwm')}</h4>
                                                     <p className="text-xs text-slate-500 mb-3">
-                                                        Контроллер для: <span className="text-cyan-400">{selectedFan.chip}</span>
+                                                        {t('wizard.controllerFor')} <span className="text-cyan-400">{selectedFan.chip}</span>
                                                     </p>
                                                 </div>
 
@@ -327,7 +329,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                                         </div>
                                                     ))}
                                                     {availablePwms.length === 0 && (
-                                                        <p className="text-yellow-500 text-sm">Нет свободных PWM на этом чипе</p>
+                                                        <p className="text-yellow-500 text-sm">{t('wizard.noPwm')}</p>
                                                     )}
                                                 </div>
                                             </div>
@@ -339,7 +341,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                             {/* Linked Pairs */}
                             {linkedPairs.length > 0 && (
                                 <div className="mt-6 border-t border-slate-700 pt-4">
-                                    <h3 className="text-sm font-medium text-green-400 mb-2">✓ Добавленные вентиляторы</h3>
+                                    <h3 className="text-sm font-medium text-green-400 mb-2">{t('wizard.linkedFans')}</h3>
                                     <div className="space-y-2">
                                         {linkedPairs.map((pair, i) => (
                                             <div key={i} className="flex items-center gap-3 p-3 bg-green-900/20 rounded-lg border border-green-700/50">
@@ -391,25 +393,25 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                             {/* Group Name */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Название группы
+                                    {t('wizard.groupName')}
                                 </label>
                                 <input
                                     type="text"
                                     value={groupName}
                                     onChange={(e) => setGroupName(e.target.value)}
                                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                                    placeholder="Например: Корпус, CPU, Радиатор..."
+                                    placeholder={t('wizard.groupNamePlaceholder')}
                                 />
                             </div>
 
                             {/* Temperature Sources */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Реагировать на температуры
+                                    {t('wizard.reactTo')}
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                     {sensors.length === 0 ? (
-                                        <p className="text-slate-500 text-sm">Нет доступных датчиков. Добавьте их в настройках.</p>
+                                        <p className="text-slate-500 text-sm">{t('wizard.noSensors')}</p>
                                     ) : sensors.map(sensor => (
                                         <button
                                             key={sensor.id}
@@ -430,7 +432,7 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                             {/* Visual Style Selector */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">
-                                    Стиль оформления
+                                    {t('wizard.visualStyle')}
                                 </label>
                                 <div className="grid grid-cols-3 gap-4">
                                     {[
@@ -455,12 +457,12 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
 
                             {/* Summary */}
                             <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                                <h4 className="font-medium text-slate-300 mb-2">Сводка</h4>
+                                <h4 className="font-medium text-slate-300 mb-2">{t('wizard.summary')}</h4>
                                 <ul className="text-sm text-slate-400 space-y-1">
-                                    <li>Группа: <span className="text-white">{groupName}</span></li>
-                                    <li>Вентиляторов: <span className="text-white">{linkedPairs.length}</span></li>
-                                    <li>Триггеры: <span className="text-cyan-400">{tempSources.join(', ').toUpperCase()}</span></li>
-                                    <li>Стиль: <span className="capitalize text-white">{visualStyle}</span></li>
+                                    <li>{t('wizard.group')} <span className="text-white">{groupName}</span></li>
+                                    <li>{t('wizard.fansCount')} <span className="text-white">{linkedPairs.length}</span></li>
+                                    <li>{t('wizard.triggers')}: <span className="text-cyan-400">{tempSources.join(', ').toUpperCase()}</span></li>
+                                    <li>{t('wizard.style')} <span className="capitalize text-white">{visualStyle}</span></li>
                                 </ul>
                             </div>
 
@@ -470,14 +472,14 @@ export const FanWizard: React.FC<FanWizardProps> = ({ onComplete, onCancel, used
                                     onClick={() => setStep('link')}
                                     className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg"
                                 >
-                                    ← Назад
+                                    {t('wizard.back')}
                                 </button>
                                 <button
                                     onClick={handleComplete}
                                     disabled={!groupName || tempSources.length === 0}
                                     className="px-6 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium"
                                 >
-                                    {existingGroup ? 'Сохранить изменения' : 'Создать группу'}
+                                    {existingGroup ? t('wizard.save') : t('wizard.create')}
                                 </button>
                             </div>
                         </div>

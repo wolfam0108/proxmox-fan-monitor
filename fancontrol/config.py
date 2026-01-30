@@ -61,7 +61,7 @@ def migrate_old_config(old_cfg):
                 thresh = thresholds.get(mode, [None, None, None])
                 gpu_t = thresh[1] if isinstance(thresh, (list, tuple)) and len(thresh) >= 2 and thresh[1] != 999 else None
                 profiles.append({
-                    'name': names.get(mode, f'Режим {mode}'),
+                    'name': names.get(mode, f'Mode {mode}'),
                     'target': targets[mode],
                     'thresholds': {'gpu': gpu_t}
                 })
@@ -300,9 +300,9 @@ def get_current_config():
     if 'system' not in result:
         result['system'] = {
             'profiles': [
-                {'name': 'Тихий', 'target': 1200, 'thresholds': {}},
-                {'name': 'Стандарт', 'target': 1600, 'thresholds': {}},
-                {'name': 'Критический', 'target': 2000, 'thresholds': {}}
+                {'name': 'Quiet', 'target': 1200, 'thresholds': {}},
+                {'name': 'Standard', 'target': 1600, 'thresholds': {}},
+                {'name': 'Performance', 'target': 2000, 'thresholds': {}}
             ],
             'delay_up': 5,
             'hold_time': 30
@@ -310,7 +310,7 @@ def get_current_config():
     if 'gpu' not in result:
         result['gpu'] = {
             'profiles': [
-                {'name': 'Авто', 'target': 0, 'thresholds': {}},
+                {'name': 'Auto', 'target': 0, 'thresholds': {}},
             ],
             'delay_up': 5,
             'hold_time': 30

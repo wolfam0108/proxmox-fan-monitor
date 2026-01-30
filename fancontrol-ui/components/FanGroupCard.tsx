@@ -3,6 +3,7 @@ import { LogicState, FanData, TempSource } from '../types';
 import { setOverride, fetchConfig } from '../services/apiService';
 import { BackgroundChart } from './BackgroundChart';
 import { getThemeStyles, mapToThemeColor } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 interface FanGroupCardProps {
     groupId: string;
@@ -20,6 +21,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
     fans,
     type
 }) => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [pendingManual, setPendingManual] = useState<boolean | null>(null);
     const [pendingMode, setPendingMode] = useState<number | null>(null);
@@ -122,7 +124,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
                 <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl">
                     <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-slate-300 text-sm">Применяется...</span>
+                        <span className="text-slate-300 text-sm">{t('common.applying')}</span>
                     </div>
                 </div>
             )}
@@ -133,7 +135,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
                         {groupName}
                     </h3>
                     <span className="text-slate-400 text-sm">
-                        Mode {currentMode} → {typeof target === 'string' ? target : `${target}${type === 'nvidia' ? '%' : ' RPM'}`}
+                        {t('card.mode')} {currentMode} → {typeof target === 'string' ? target : `${target}${type === 'nvidia' ? '%' : ' RPM'}`}
                     </span>
                     {status && (
                         <span className={`text-xs px-2 py-0.5 rounded ${status === 'MANUAL' ? 'bg-yellow-600/30 text-yellow-400' :
@@ -155,7 +157,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
                             } ${loading ? 'opacity-50' : ''}`}
                     >
                         {loading && !isManual && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                        АВТО
+                        {t('common.auto')}
                     </button>
                     <button
                         onClick={() => handleToggleMode(true)}
@@ -166,7 +168,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
                             } ${loading ? 'opacity-50' : ''}`}
                     >
                         {loading && isManual && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                        РУЧН
+                        {t('common.manual')}
                     </button>
                 </div>
             </div>
@@ -174,7 +176,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
             {/* Manual Mode Selector */}
             {isManual && profiles.length > 0 && (
                 <div className="px-4 py-2 bg-yellow-900/20 border-b border-yellow-700/30 flex items-center gap-2 flex-wrap">
-                    <span className="text-yellow-400 text-xs">Режим:</span>
+                    <span className="text-yellow-400 text-xs">{t('card.mode')}:</span>
                     {profiles.map((p, idx) => (
                         <button
                             key={idx}
@@ -193,25 +195,25 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
             {/* Fans Table */}
             <div className="p-4 relative z-10">
                 {fans.length === 0 ? (
-                    <p className="text-slate-500 text-center py-4">Нет вентиляторов в этой группе</p>
+                    <p className="text-slate-500 text-center py-4">{t('cards.noFans')}</p>
                 ) : (
                     <table className="w-full">
                         <thead>
                             <tr className="text-slate-500 text-xs uppercase tracking-wider">
                                 <th className="text-left pb-2">
-                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">Вентилятор</span>
+                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">{t('card.fan')}</span>
                                 </th>
                                 <th className="text-left pb-2">
-                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">RPM</span>
+                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">{t('card.rpm')}</span>
                                 </th>
                                 <th className="text-left pb-2">
-                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">Цель</span>
+                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">{t('card.target')}</span>
                                 </th>
                                 <th className="text-left pb-2">
                                     <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">PWM / %</span>
                                 </th>
                                 <th className="text-left pb-2">
-                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">Статус</span>
+                                    <span className="inline-block px-2 py-0.5 rounded bg-slate-900/90">{t('card.status')}</span>
                                 </th>
                             </tr>
                         </thead>

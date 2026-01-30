@@ -14,10 +14,13 @@ import { SensorCard } from './components/SensorCard';
 import { FanGroupCard } from './components/FanGroupCard';
 import { HistoryChart } from './components/HistoryChart';
 import { SettingsPanel } from './components/SettingsPanel';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 
 const MAX_HISTORY_POINTS = 10000;
 
 export default function App() {
+  const { t } = useTranslation();
   const [data, setData] = useState<SystemData | null>(null);
   const [history, setHistory] = useState<ChartDataPoint[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'settings'>('dashboard');
@@ -77,7 +80,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-          <p>Подключение к демону...</p>
+          <p>{t('app.connecting')}</p>
         </div>
       </div>
     );
@@ -96,36 +99,40 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-3">
               <Server size={28} className="text-cyan-500" />
-              УПРАВЛЕНИЕ ОХЛАЖДЕНИЕМ
+              {t('app.title')}
             </h1>
-            <p className="text-slate-500 text-sm mt-1">Демон подключён • Опрос каждую секунду</p>
+            <p className="text-slate-500 text-sm mt-1">{t('app.subtitle')}</p>
           </div>
 
-          <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <LayoutDashboard size={16} />
-              Панель
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'analytics' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <LineChartIcon size={16} />
-              Графики
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <Settings size={16} />
-              Настройки
-            </button>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+
+            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <LayoutDashboard size={16} />
+                {t('app.dashboard')}
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'analytics' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <LineChartIcon size={16} />
+                {t('app.analytics')}
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-slate-800 text-cyan-400 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Settings size={16} />
+                {t('app.settings')}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -194,7 +201,7 @@ export default function App() {
               {/* Fallback if no sensors configured (should not happen in prod ideally) */}
               {(!data.sensors || data.sensors.length === 0) && (
                 <div className="col-span-3 text-center py-4 text-slate-500 bg-slate-900/50 rounded-lg">
-                  <p>Датчики не настроены</p>
+                  <p>{t('app.noSensors')}</p>
                 </div>
               )}
             </div>
@@ -223,8 +230,8 @@ export default function App() {
               })}
               {Object.keys(data.logic || {}).length === 0 && (
                 <div className="text-center py-12 text-slate-500 bg-slate-900/50 rounded-xl border border-slate-800">
-                  <p className="text-lg">Нет настроенных групп вентиляторов</p>
-                  <p className="text-sm mt-2">Откройте Настройки → Настроить для создания группы</p>
+                  <p className="text-lg">{t('app.noGroups')}</p>
+                  <p className="text-sm mt-2">{t('app.configureHint')}</p>
                 </div>
               )}
             </div>
@@ -239,11 +246,11 @@ export default function App() {
         {activeTab === 'analytics' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-              <h3 className="text-lg font-medium text-slate-200 mb-4">История температур и режимов</h3>
+              <h3 className="text-lg font-medium text-slate-200 mb-4">{t('app.historyTitle')}</h3>
               {historyLoading ? (
                 <div className="h-[350px] flex items-center justify-center text-slate-400">
                   <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Загрузка...
+                  {t('common.loading')}
                 </div>
               ) : (
                 <HistoryChart
@@ -259,8 +266,8 @@ export default function App() {
         {activeTab === 'settings' && (
           <div className="animate-in fade-in duration-500">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-slate-200">Настройки охлаждения</h2>
-              <p className="text-slate-400 text-sm mt-1">Настройка целевых оборотов и температурных порогов</p>
+              <h2 className="text-xl font-semibold text-slate-200">{t('app.settingsTitle')}</h2>
+              <p className="text-slate-400 text-sm mt-1">{t('app.settingsSubtitle')}</p>
             </div>
             <SettingsPanel />
           </div>

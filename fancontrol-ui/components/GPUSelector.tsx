@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { scanGpus, testGpuFan, saveGpuGroup, GpuInfo, GpuScanResult } from '../services/apiService';
+import { useTranslation } from 'react-i18next';
 
 interface GPUSelectorProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
     onClose,
     onSave,
 }) => {
+    const { t } = useTranslation();
     const [gpus, setGpus] = useState<GpuInfo[]>([]);
     const [selectedGpu, setSelectedGpu] = useState<GpuInfo | null>(null);
     const [selectedFans, setSelectedFans] = useState<Set<number>>(new Set());
@@ -37,7 +39,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                     setLoading(false);
                 })
                 .catch(e => {
-                    setError('Ошибка сканирования GPU');
+                    setError(t('selectors.scanError'));
                     setLoading(false);
                 });
         }
@@ -85,10 +87,10 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                 onSave();
                 onClose();
             } else {
-                setError(result.error || 'Ошибка сохранения');
+                setError(result.error || t('settings.saveError'));
             }
         } catch (e) {
-            setError('Ошибка сохранения');
+            setError(t('settings.saveError'));
         }
         setSaving(false);
     };
@@ -103,9 +105,9 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                     <div>
                         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                             <span className="text-green-400">🎮</span>
-                            Настройка NVIDIA GPU
+                            {t('selectors.gpuTitle')}
                         </h2>
-                        <p className="text-slate-400 text-sm">Выберите GPU и вентиляторы для управления</p>
+                        <p className="text-slate-400 text-sm">{t('selectors.gpuDesc')}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -122,20 +124,20 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                     {loading ? (
                         <div className="flex items-center justify-center py-12 gap-3">
                             <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-slate-400">Сканирование NVIDIA GPU...</span>
+                            <span className="text-slate-400">{t('selectors.scanGpu')}</span>
                         </div>
                     ) : error ? (
                         <div className="text-red-400 text-center py-12">{error}</div>
                     ) : gpus.length === 0 ? (
                         <div className="text-center py-12">
-                            <div className="text-slate-400 mb-2">NVIDIA GPU не найден</div>
-                            <p className="text-slate-500 text-sm">Убедитесь, что установлены драйверы NVIDIA и nvidia-settings</p>
+                            <div className="text-slate-400 mb-2">{t('selectors.gpuNotFound')}</div>
+                            <p className="text-slate-500 text-sm">{t('selectors.driverHint')}</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
                             {/* GPU Selection */}
                             <div>
-                                <h3 className="text-slate-400 text-sm font-medium mb-3">Обнаруженные GPU</h3>
+                                <h3 className="text-slate-400 text-sm font-medium mb-3">{t('selectors.detectedGpus')}</h3>
                                 <div className="space-y-2">
                                     {gpus.map(gpu => (
                                         <div
@@ -163,7 +165,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                                             <div className="flex-1">
                                                 <div className="font-medium text-white">{gpu.name}</div>
                                                 <div className="text-slate-500 text-sm">
-                                                    GPU {gpu.index} • {gpu.fan_count} вентилятор(ов) • Display {gpu.display}
+                                                    GPU {gpu.index} • {gpu.fan_count} {t('selectors.fanCount')} • Display {gpu.display}
                                                 </div>
                                             </div>
 
@@ -182,7 +184,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                             {/* Fan Selection */}
                             {selectedGpu && selectedGpu.fans.length > 0 && (
                                 <div>
-                                    <h3 className="text-slate-400 text-sm font-medium mb-3">Вентиляторы GPU</h3>
+                                    <h3 className="text-slate-400 text-sm font-medium mb-3">{t('selectors.gpuFans')}</h3>
                                     <div className="grid grid-cols-2 gap-3">
                                         {selectedGpu.fans.map(fanIndex => {
                                             const isSelected = selectedFans.has(fanIndex);
@@ -213,7 +215,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
 
                                                     {/* Fan info */}
                                                     <div className="flex-1">
-                                                        <span className="text-white font-medium">Вентилятор {fanIndex + 1}</span>
+                                                        <span className="text-white font-medium">{t('selectors.fan')} {fanIndex + 1}</span>
                                                         <span className="text-slate-500 text-sm ml-2">[fan:{fanIndex}]</span>
                                                     </div>
 
@@ -232,10 +234,10 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                                                         {isTesting ? (
                                                             <span className="flex items-center gap-1">
                                                                 <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                                                                Тест...
+                                                                {t('selectors.testing')}
                                                             </span>
                                                         ) : (
-                                                            'Тест'
+                                                            t('selectors.test')
                                                         )}
                                                     </button>
                                                 </div>
@@ -243,7 +245,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                                         })}
                                     </div>
                                     <p className="text-slate-500 text-xs mt-2">
-                                        Нажмите «Тест» чтобы раскрутить вентилятор до 50% на 2 секунды
+                                        {t('selectors.testHint')}
                                     </p>
                                 </div>
                             )}
@@ -262,7 +264,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                 <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-700">
                     <div className="text-slate-500 text-sm">
                         {selectedGpu && selectedFans.size > 0 && (
-                            <>Будет добавлена группа GPU с {selectedFans.size} вентилятором(ами)</>
+                            <>{t('selectors.willAdd', { count: selectedFans.size })}</>
                         )}
                     </div>
                     <div className="flex gap-3">
@@ -270,7 +272,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                             onClick={onClose}
                             className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
                         >
-                            Отмена
+                            {t('common.cancel')}
                         </button>
                         <button
                             onClick={handleSave}
@@ -280,7 +282,7 @@ export const GPUSelector: React.FC<GPUSelectorProps> = ({
                             {saving && (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             )}
-                            Добавить GPU
+                            {t('selectors.addGpu')}
                         </button>
                     </div>
                 </div>

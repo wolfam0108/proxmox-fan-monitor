@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { scanCpuSensors, saveCpuSensor, CpuSensorInfo } from '../services/apiService';
+import { useTranslation } from 'react-i18next';
 
 interface CPUSelectorProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
     currentPath,
     onSave,
 }) => {
+    const { t } = useTranslation();
     const [sensors, setSensors] = useState<CpuSensorInfo[]>([]);
     const [selectedPath, setSelectedPath] = useState<string>('');
     const [recommended, setRecommended] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                     setLoading(false);
                 })
                 .catch(e => {
-                    setError('Ошибка сканирования датчиков');
+                    setError(t('selectors.scanError'));
                     setLoading(false);
                 });
         }
@@ -56,10 +58,10 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                 onSave(selectedPath);
                 onClose();
             } else {
-                setError(result.error || 'Ошибка сохранения');
+                setError(result.error || t('settings.saveError'));
             }
         } catch (e) {
-            setError('Ошибка сохранения');
+            setError(t('settings.saveError'));
         }
         setSaving(false);
     };
@@ -82,9 +84,9 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                     <div>
                         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                             <span className="text-cyan-400">🌡️</span>
-                            Датчик температуры CPU
+                            {t('selectors.cpuTitle')}
                         </h2>
-                        <p className="text-slate-400 text-sm">Выберите датчик для мониторинга температуры процессора</p>
+                        <p className="text-slate-400 text-sm">{t('selectors.cpuDesc')}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -101,13 +103,13 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                     {loading ? (
                         <div className="flex items-center justify-center py-12 gap-3">
                             <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-slate-400">Сканирование датчиков...</span>
+                            <span className="text-slate-400">{t('selectors.scan')}</span>
                         </div>
                     ) : error ? (
                         <div className="text-red-400 text-center py-12">{error}</div>
                     ) : sensors.length === 0 ? (
                         <div className="text-center py-12">
-                            <div className="text-slate-400 mb-2">Датчики температуры не найдены</div>
+                            <div className="text-slate-400 mb-2">{t('selectors.notFound')}</div>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -147,7 +149,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                                                             <span className="font-medium text-white">{sensor.label}</span>
                                                             {isRecommended && (
                                                                 <span className="px-1.5 py-0.5 text-xs rounded bg-cyan-900/50 text-cyan-400 border border-cyan-700">
-                                                                    Рекомендуется
+                                                                    {t('selectors.recommended')}
                                                                 </span>
                                                             )}
                                                             {sensor.recommended && !isRecommended && (
@@ -182,7 +184,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                 <div className="flex items-center justify-between gap-3 p-4 border-t border-slate-700">
                     <div className="text-slate-500 text-sm">
                         {selectedPath && (
-                            <>Выбран: <span className="font-mono text-cyan-400">{sensors.find(s => s.path === selectedPath)?.label || selectedPath}</span></>
+                            <>{t('selectors.selected')} <span className="font-mono text-cyan-400">{sensors.find(s => s.path === selectedPath)?.label || selectedPath}</span></>
                         )}
                     </div>
                     <div className="flex gap-3">
@@ -190,7 +192,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                             onClick={onClose}
                             className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
                         >
-                            Отмена
+                            {t('common.cancel')}
                         </button>
                         <button
                             onClick={handleSave}
@@ -200,7 +202,7 @@ export const CPUSelector: React.FC<CPUSelectorProps> = ({
                             {saving && (
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             )}
-                            Сохранить
+                            {t('common.save')}
                         </button>
                     </div>
                 </div>

@@ -3,6 +3,7 @@ import { LucideIcon } from 'lucide-react';
 import { SensorSourceDetail, ChartDataPoint } from '../types';
 import { Sparkline } from './Sparkline';
 import { getThemeStyles, mapToThemeColor } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 interface SensorCardProps {
     id: string; // Sensor ID for history lookup
@@ -23,6 +24,7 @@ const SourceItem: React.FC<{
     history?: ChartDataPoint[];
     accentColor: string;
 }> = ({ source, sensorId, history, accentColor }) => {
+    const { t } = useTranslation();
     const isDrive = source.type === 'drive' && source.details;
 
     // Extract history data for this source
@@ -75,12 +77,12 @@ const SourceItem: React.FC<{
                     </div>
 
                     <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-slate-400">
-                        <span>Model:</span> <span className="text-slate-300 truncate">{d.model}</span>
-                        <span>SN:</span>    <span className="font-mono text-slate-500 truncate">{d.serial}</span>
+                        <span>{t('sensor.model')}</span> <span className="text-slate-300 truncate">{d.model}</span>
+                        <span>{t('sensor.sn')}</span>    <span className="font-mono text-slate-500 truncate">{d.serial}</span>
 
                         <div className="col-span-2 flex justify-between mt-1 border-t border-slate-700/50 pt-1">
-                            <span>Size: <span className="text-slate-300">{d.size}</span></span>
-                            <span>FF: <span className="text-slate-300">{d.form_factor}</span></span>
+                            <span>{t('sensor.size')} <span className="text-slate-300">{d.size}</span></span>
+                            <span>{t('sensor.ff')} <span className="text-slate-300">{d.form_factor}</span></span>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogicState, FanConfig, FanProfile } from '../types';
 import { setOverride, fetchConfig } from '../services/apiService';
+import { useTranslation } from 'react-i18next';
 
 interface LogicCardProps {
   title: string;
@@ -13,6 +14,7 @@ const Spinner = () => (
 );
 
 export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [profiles, setProfiles] = useState<FanProfile[]>([]);
   const [pendingAction, setPendingAction] = useState<{ type: 'toggle' | 'mode'; expectedManual?: boolean; expectedMode?: number } | null>(null);
@@ -29,17 +31,17 @@ export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
       // Fallback to default modes if config fetch fails
       if (type === 'SYS') {
         setProfiles([
-          { name: 'Тихий', target: 1200, thresholds: {} },
-          { name: 'Стандарт', target: 1600, thresholds: {} },
-          { name: 'Критический', target: 2000, thresholds: {} },
+          { name: 'Quiet', target: 1200, thresholds: {} },
+          { name: 'Standard', target: 1600, thresholds: {} },
+          { name: 'Performance', target: 2000, thresholds: {} },
         ]);
       } else {
         setProfiles([
-          { name: 'Авто', target: 0, thresholds: {} },
-          { name: 'Режим 1', target: 45, thresholds: {} },
-          { name: 'Режим 2', target: 50, thresholds: {} },
-          { name: 'Режим 3', target: 60, thresholds: {} },
-          { name: 'Максимум', target: 100, thresholds: {} },
+          { name: 'Auto', target: 0, thresholds: {} },
+          { name: 'Mode 1', target: 45, thresholds: {} },
+          { name: 'Mode 2', target: 50, thresholds: {} },
+          { name: 'Mode 3', target: 60, thresholds: {} },
+          { name: 'Max', target: 100, thresholds: {} },
         ]);
       }
     });
@@ -87,12 +89,12 @@ export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
   let statusColor = "text-green-400";
   let statusLabel = data.status;
 
-  if (data.status === "Stable") statusLabel = "Стабильно";
-  if (data.status === "Init") statusLabel = "Инициализация";
-  if (data.status === "MANUAL") { statusLabel = "РУЧНОЙ"; statusColor = "text-purple-400"; }
-  if (data.status.includes("Pending")) { statusLabel = data.status.replace("Pending", "Ожидание"); statusColor = "text-yellow-400"; }
-  if (data.status.includes("Escalated")) { statusLabel = "Повышен"; statusColor = "text-orange-400"; }
-  if (data.status.includes("Locked")) { statusLabel = data.status.replace("Locked", "Блокировка"); statusColor = "text-blue-400"; }
+  if (data.status === "Stable") statusLabel = t('logic.stable');
+  if (data.status === "Init") statusLabel = t('logic.init');
+  if (data.status === "MANUAL") { statusLabel = t('logic.manual'); statusColor = "text-purple-400"; }
+  if (data.status.includes("Pending")) { statusLabel = data.status.replace("Pending", t('logic.pending')); statusColor = "text-yellow-400"; }
+  if (data.status.includes("Escalated")) { statusLabel = t('logic.escalated'); statusColor = "text-orange-400"; }
+  if (data.status.includes("Locked")) { statusLabel = data.status.replace("Locked", t('logic.locked')); statusColor = "text-blue-400"; }
 
   const handleToggle = async () => {
     const expectedManual = !isManual;
@@ -108,7 +110,7 @@ export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
     await setOverride(overrideType, true, String(modeIndex), true);
   };
 
-  const titleRu = type === 'SYS' ? 'Система' : 'GPU';
+  const titleRu = type === 'SYS' ? t('logic.system') : t('logic.gpu');
 
   // Get current profile name
   const currentProfileName = profiles[currentModeIndex]?.name || `Режим ${currentModeIndex}`;
@@ -120,7 +122,7 @@ export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
         <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center" style={{ zIndex: 50 }}>
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-cyan-400 text-sm">Применение...</span>
+            <span className="text-cyan-400 text-sm">{t('common.applying')}</span>
           </div>
         </div>
       )}
@@ -139,14 +141,14 @@ export const LogicCard: React.FC<LogicCardProps> = ({ title, data, type }) => {
               } ${loading ? 'opacity-50 cursor-wait' : ''}`}
           >
             {loading ? <Spinner /> : null}
-            {isManual ? 'РУЧНОЙ' : 'АВТО'}
+            {isManual ? t('logic.manual') : t('logic.auto')}
           </button>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-2xl font-bold text-white">{currentProfileName}</span>
           <span className="px-2 py-1 rounded text-xs font-mono bg-slate-700 text-slate-300 border border-slate-600">
-            Цель: {data.target}
+            {t('common.target')}: {data.target}
           </span>
         </div>
 

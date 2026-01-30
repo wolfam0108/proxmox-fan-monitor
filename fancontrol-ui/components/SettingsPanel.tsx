@@ -9,12 +9,14 @@ import { GPUSelector } from './GPUSelector';
 import { CPUSelector } from './CPUSelector';
 import { SensorManager } from './SensorManager';
 import { getThemeStyles } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsPanelProps {
     onClose?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
+    const { t } = useTranslation();
     const [config, setConfig] = useState<FanConfig | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -45,7 +47,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
             setSensors(sensorsData.sensors || []);
             setLoading(false);
         }).catch(e => {
-            setMessage({ type: 'error', text: 'Failed to load config' });
+            setMessage({ type: 'error', text: t('settings.loadError') });
             setLoading(false);
         });
     }, []);
@@ -71,7 +73,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
             if (res.success) {
                 if (andRestart) {
                     // Keep saving=true to maintain overlay during restart
-                    setMessage({ type: 'success', text: 'Конфиг сохранён. Перезапуск сервиса...' });
+                    setMessage({ type: 'success', text: t('settings.restart') });
                     try {
                         await restartService();
                     } catch (e) {
@@ -82,15 +84,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                     // Don't clear saving state - overlay stays until reload
                     return;
                 } else {
-                    setMessage({ type: 'success', text: 'Конфиг сохранён. Требуется перезапуск для применения.' });
+                    setMessage({ type: 'success', text: `${t('settings.saved')} ${t('settings.restartRequired')}` });
                     setSaving(false);
                 }
             } else {
-                setMessage({ type: 'error', text: res.error || 'Ошибка сохранения' });
+                setMessage({ type: 'error', text: res.error || t('settings.saveError') });
                 setSaving(false);
             }
         } catch (e) {
-            setMessage({ type: 'error', text: 'Ошибка сети' });
+            setMessage({ type: 'error', text: t('settings.networkError') });
             setSaving(false);
         }
     };
@@ -143,13 +145,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
         return (
             <div className="text-slate-400 p-8 text-center flex items-center justify-center gap-3">
                 <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                Загрузка конфигурации...
+                {t('settings.loadingConfig')}
             </div>
         );
     }
 
     if (!config) {
-        return <div className="text-red-400 p-8 text-center">Не удалось загрузить конфигурацию</div>;
+        return <div className="text-red-400 p-8 text-center">{t('settings.loadError')}</div>;
     }
 
     return (
@@ -160,8 +162,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                     <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 flex flex-col items-center gap-4 shadow-2xl">
                         <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                         <div className="text-center">
-                            <p className="text-white text-lg font-medium">Сохранение конфигурации...</p>
-                            <p className="text-slate-400 text-sm mt-1">Пожалуйста, подождите</p>
+                            <p className="text-white text-lg font-medium">{t('settings.saving')}</p>
+                            <p className="text-slate-400 text-sm mt-1">{t('settings.wait')}</p>
                         </div>
                     </div>
                 </div>
@@ -191,8 +193,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
             <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h3 className="text-lg font-semibold text-cyan-400">Системные вентиляторы</h3>
-                        <p className="text-slate-500 text-sm">Группы вентиляторов с профилями скорости</p>
+                        <h3 className="text-lg font-semibold text-cyan-400">{t('settings.systemFans')}</h3>
+                        <p className="text-slate-500 text-sm">{t('settings.systemFansSubtitle')}</p>
                     </div>
                     <button
                         onClick={() => setShowFanWizard(true)}
@@ -201,7 +203,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 5v14M5 12h14" />
                         </svg>
-                        Добавить группу
+                        {t('settings.addGroup')}
                     </button>
                 </div>
 
@@ -209,8 +211,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                 {(!config.fan_groups || config.fan_groups.length === 0) ? (
                     <div className="text-center py-8 text-slate-500 border border-dashed border-slate-700 rounded-lg">
                         <div className="text-3xl mb-2">🌀</div>
-                        <p>Нет групп вентиляторов</p>
-                        <p className="text-sm mt-1">Нажмите "Добавить группу" для настройки</p>
+                        <p>{t('settings.noGroups')}</p>
+                        <p className="text-sm mt-1">{t('settings.noGroupsHint')}</p>
                     </div>
                 ) : (
                     <div className="space-y-6">
@@ -232,16 +234,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                                                 <span className={`${colors.text} font-medium text-lg`}>{group.name}</span>
                                                 {group.type === 'nvidia' && <span className="text-[10px] bg-green-900 text-green-300 px-1.5 rounded">GPU</span>}
                                                 <span className="text-xs text-slate-500">
-                                                    Триггеры: {group.temp_sources?.join(', ').toUpperCase()}
+                                                    {t('settings.triggers')}: {group.temp_sources?.join(', ').toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="text-xs text-slate-400">
-                                                Вентиляторы: {group.fans?.length ? group.fans.map(f => f.name || f.fan_id).join(', ') : 'нет'}
+                                                {t('common.fans')}: {group.fans?.length ? group.fans.map(f => f.name || f.fan_id).join(', ') : t('sensorEditor.none')}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2 text-sm">
-                                                <span className="text-slate-400">Задержка:</span>
+                                                <span className="text-slate-400">{t('settings.delay')}:</span>
                                                 <input
                                                     type="number"
                                                     value={group.delay_up}
@@ -257,7 +259,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                                                 />
                                             </div>
                                             <div className="flex items-center gap-2 text-sm">
-                                                <span className="text-slate-400">Удержание:</span>
+                                                <span className="text-slate-400">{t('settings.hold')}:</span>
                                                 <input
                                                     type="number"
                                                     value={group.hold_time}
@@ -280,18 +282,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                                                     }}
                                                     className="text-cyan-400 hover:text-cyan-300 text-sm"
                                                 >
-                                                    ✎ Изменить
+                                                    ✎ {t('common.edit')}
                                                 </button>
                                                 <button
                                                     onClick={() => {
-                                                        if (confirm(`Удалить группу "${group.name}"?`)) {
+                                                        if (confirm(t('settings.deleteConfirm', { name: group.name }))) {
                                                             const newGroups = (config.fan_groups || []).filter(g => g.id !== group.id);
                                                             setConfig({ ...config, fan_groups: newGroups });
                                                         }
                                                     }}
                                                     className="text-red-400 hover:text-red-300 text-sm"
                                                 >
-                                                    ✕ Удалить
+                                                    ✕ {t('common.delete')}
                                                 </button>
                                             </div>
                                         </div>
@@ -333,7 +335,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-4 justify-end items-center">
                 <span className="text-slate-500 text-xs mr-auto">
-                    Изменения в порогах требуют перезапуска сервиса
+                    {t('settings.changesRequireRestart')}
                 </span>
                 <button
                     onClick={() => handleSave(false)}
@@ -341,7 +343,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                     className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                     {saving && <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>}
-                    Сохранить
+                    {t('settings.save')}
                 </button>
                 <button
                     onClick={() => handleSave(true)}
@@ -349,7 +351,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                     className="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                     {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                    Сохранить и применить
+                    {t('settings.saveAndApply')}
                 </button>
             </div>
 
@@ -394,7 +396,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                                         // The backend logic I wrote/planned accepts mixed types.
                                     };
                                 }
-                                setMessage({ type: 'success', text: `Группа "${groupName}" обновлена. Нажмите "Сохранить и применить".` });
+                                setMessage({ type: 'success', text: t('settings.groupUpdated', { name: groupName }) });
                             } else {
                                 // Create new
                                 // Generate ID from name
@@ -417,7 +419,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                                     visual_style: visualStyle
                                 };
                                 newGroups.push(newGroup);
-                                setMessage({ type: 'success', text: `Группа "${groupName}" добавлена. Нажмите "Сохранить и применить".` });
+                                setMessage({ type: 'success', text: t('settings.groupAdded', { name: groupName }) });
                             }
 
                             // Update local config
@@ -445,7 +447,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                     // Reload config to get the new GPU group
                     fetchConfig().then(cfg => {
                         setConfig(cfg);
-                        setMessage({ type: 'success', text: 'GPU группа добавлена. Нажмите "Сохранить и применить" для активации.' });
+                        setMessage({ type: 'success', text: t('settings.pendingGpuGroup') || 'GPU Group added. Click Save and Apply.' }); // Need key for this too
                     });
                     setShowGPUSelector(false);
                 }}
@@ -459,7 +461,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = () => {
                 onSave={(path) => {
                     // Update local config
                     setConfig({ ...config!, cpu_sensor_path: path } as any);
-                    setMessage({ type: 'success', text: 'Датчик CPU сохранён. Нажмите "Сохранить и применить" для активации.' });
+                    setMessage({ type: 'success', text: t('settings.cpuSensorSaved') || 'CPU Sensor saved. Click Save and Apply.' });
                 }}
             />
         </div>

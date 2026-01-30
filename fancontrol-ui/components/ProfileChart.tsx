@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { FanProfile } from '../types';
 import { CHART_COLORS as COLORS } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileChartProps {
     profiles: FanProfile[];
@@ -23,6 +24,7 @@ interface ChartDataPoint {
 }
 
 export const ProfileChart: React.FC<ProfileChartProps> = ({ profiles, tempSources }) => {
+    const { t } = useTranslation();
     // Guard against undefined/null profiles
     const safeProfiles = profiles || [];
     const sources = tempSources && tempSources.length > 0 ? tempSources : [];
@@ -30,7 +32,7 @@ export const ProfileChart: React.FC<ProfileChartProps> = ({ profiles, tempSource
     if (safeProfiles.length === 0 || sources.length === 0) {
         return (
             <div className="h-[250px] flex items-center justify-center text-slate-500 text-sm">
-                Нет профилей или источников для отображения
+                {t('profile.noProfiles')}
             </div>
         );
     }
@@ -97,7 +99,7 @@ export const ProfileChart: React.FC<ProfileChartProps> = ({ profiles, tempSource
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-slate-300">График профилей</h4>
+                <h4 className="text-sm font-medium text-slate-300">{t('profile.title')}</h4>
                 <div className="flex items-center gap-3 text-xs flex-wrap justify-end">
                     {sources.map((source, index) => (
                         <span key={source} className="flex items-center gap-1">
@@ -166,7 +168,7 @@ export const ProfileChart: React.FC<ProfileChartProps> = ({ profiles, tempSource
             </div>
 
             <div className="text-xs text-slate-500 text-center">
-                Ось X: температура срабатывания • Ось Y: целевая скорость/мощность
+                {t('profile.axisX')} • {t('profile.axisY')}
             </div>
         </div>
     );

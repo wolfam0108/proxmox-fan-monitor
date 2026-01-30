@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FanProfile, TempSource } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileTableProps {
     profiles: FanProfile[];
@@ -44,6 +45,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
     onDelete,
     canDelete,
 }) => {
+    const { t } = useTranslation();
     const {
         attributes,
         listeners,
@@ -76,7 +78,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300 p-1 flex-shrink-0"
-                title="Перетащите для сортировки"
+                title={t('profile.dragToSort')}
             >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="9" cy="6" r="2" />
@@ -95,7 +97,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
                     value={profile.name}
                     onChange={(e) => onUpdate(index, 'name', e.target.value)}
                     className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    placeholder="Название"
+                    placeholder={t('wizard.namePlaceholder')}
                 />
             </div>
 
@@ -137,7 +139,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
                     ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30'
                     : 'text-slate-600 cursor-not-allowed'
                     }`}
-                title={canDelete ? 'Удалить режим' : 'Нельзя удалить единственный режим'}
+                title={canDelete ? t('profile.delete') : t('profile.cannotDelete')}
             >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
@@ -148,6 +150,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
 };
 
 export const ProfileTable: React.FC<ProfileTableProps> = ({ profiles, type, onChange, tempSources = ['cpu', 'gpu', 'hdd'] }) => {
+    const { t } = useTranslation();
     // Guard against undefined/null profiles
     const safeProfiles = profiles || [];
 
@@ -206,8 +209,8 @@ export const ProfileTable: React.FC<ProfileTableProps> = ({ profiles, type, onCh
             {/* Header */}
             <div className="hidden md:flex items-center gap-2 px-2 text-slate-400 text-xs uppercase tracking-wider">
                 <div className="w-8"></div>
-                <div className="flex-1">Название</div>
-                <div className="w-20">Цель</div>
+                <div className="flex-1">{t('profile.name')}</div>
+                <div className="w-20">{t('profile.target')}</div>
                 {tempSources.map(source => (
                     <div key={source} className="w-16 text-center" title={source}>
                         {source.toUpperCase().slice(0, 3)} &gt;
@@ -250,13 +253,13 @@ export const ProfileTable: React.FC<ProfileTableProps> = ({ profiles, type, onCh
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 5v14M5 12h14" />
                 </svg>
-                Добавить режим
+                {t('profile.addMode')}
             </button>
 
             <p className="text-slate-500 text-xs">
                 {type === 'system'
-                    ? 'Режим активируется когда любой из датчиков превышает указанный порог'
-                    : 'Режим 0 (Авто) = управление драйвером. Остальные режимы по порогу GPU'}
+                    ? t('profile.systemHint')
+                    : t('profile.gpuHint')}
             </p>
         </div>
     );

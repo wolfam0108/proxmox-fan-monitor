@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Types
 interface SensorSource {
@@ -34,10 +35,15 @@ interface SensorEditorProps {
     editingSensor: ConfiguredSensor | null;
 }
 
-const PRESETS = [
-    { id: 'system', name: 'Системный', icon: '🖥️', color: 'cyan' },
-    { id: 'accelerator', name: 'Ускоритель', icon: '🎮', color: 'green' },
-    { id: 'storage', name: 'Накопитель', icon: '💾', color: 'orange' }
+const getPresets = (t: any) => [
+    { id: 'system', name: t('sensorEditor.system'), icon: '🖥️', color: 'cyan' },
+    { id: 'accelerator', name: t('sensorEditor.accelerator'), icon: '🎮', color: 'green' },
+    { id: 'storage', name: t('sensorEditor.storage'), icon: '💾', color: 'orange' }
+];
+
+const PRESETS = [ // Fallback if needed or unused
+    { id: 'system', name: 'System', icon: '🖥️', color: 'cyan' },
+    // ...
 ];
 
 export const SensorEditor: React.FC<SensorEditorProps> = ({
@@ -46,6 +52,8 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
     onSave,
     editingSensor
 }) => {
+    const { t } = useTranslation();
+    const PRESETS_LIST = getPresets(t);
     // Single view state, no steps
     const [name, setName] = useState('');
     const [preset, setPreset] = useState<'system' | 'accelerator' | 'storage'>('system');
@@ -106,7 +114,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                     setLoading(false);
                 })
                 .catch(() => {
-                    setError('Ошибка сканирования датчиков');
+                    setError(t('sensorEditor.scanError'));
                     setLoading(false);
                 });
         }
@@ -188,9 +196,9 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
 
     // Combine all sources into one list
     const allSources = [
-        ...sources.hwmon.map(s => ({ ...s, _type: 'hwmon', _label: 'Системный' })),
+        ...sources.hwmon.map(s => ({ ...s, _type: 'hwmon', _label: t('sensorEditor.system') })),
         ...sources.nvidia.map(s => ({ ...s, _type: 'nvidia', _label: 'GPU' })),
-        ...sources.drives.map(s => ({ ...s, _type: 'drive', _label: 'Диск' }))
+        ...sources.drives.map(s => ({ ...s, _type: 'drive', _label: t('sensorEditor.storage') }))
     ];
 
     // Filter and Sort
@@ -224,7 +232,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                 <div className="flex items-center justify-between p-4 border-b border-slate-700">
                     <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                         <span className="text-cyan-400">🌡️</span>
-                        {editingSensor ? 'Редактировать датчик' : 'Добавить датчик'}
+                        {editingSensor ? t('sensorEditor.editTitle') : t('sensorEditor.addTitle')}
                     </h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors">
                         ✕
@@ -235,21 +243,21 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                 <div className="flex-1 overflow-auto p-6 space-y-6 flex flex-col">
                     {/* 1. Name Input */}
                     <div>
-                        <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Название</label>
+                        <label className="block text-slate-400 text-xs uppercase font-bold mb-2">{t('sensorEditor.name')}</label>
                         <input
                             type="text"
                             value={name}
                             onChange={e => setName(e.target.value)}
-                            placeholder="Например: Процессор"
+                            placeholder={t('sensorEditor.namePlaceholder')}
                             className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                         />
                     </div>
 
                     {/* 2. Compact Type Selector */}
                     <div>
-                        <label className="block text-slate-400 text-xs uppercase font-bold mb-2">Визуальный тип</label>
+                        <label className="block text-slate-400 text-xs uppercase font-bold mb-2">{t('sensorEditor.visualType')}</label>
                         <div className="flex gap-2">
-                            {PRESETS.map(p => (
+                            {PRESETS_LIST.map(p => (
                                 <button
                                     key={p.id}
                                     onClick={() => setPreset(p.id as any)}
@@ -268,15 +276,15 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                     {/* 3. Unified Source List */}
                     <div className="flex-1 min-h-0 flex flex-col">
                         <div className="flex items-center justify-between mb-2">
-                            <label className="block text-slate-400 text-xs uppercase font-bold">Источник данных</label>
+                            <label className="block text-slate-400 text-xs uppercase font-bold">{t('sensorEditor.dataSource')}</label>
 
                             {/* Filter Buttons */}
                             <div className="flex gap-1">
                                 {[
-                                    { id: 'all', label: 'Все' },
-                                    { id: 'hwmon', label: 'Системные' },
-                                    { id: 'nvidia', label: 'Ускорители' },
-                                    { id: 'drive', label: 'Накопители' }
+                                    { id: 'all', label: t('sensorEditor.all') },
+                                    { id: 'hwmon', label: t('sensorEditor.systems') },
+                                    { id: 'nvidia', label: t('sensorEditor.accelerators') },
+                                    { id: 'drive', label: t('sensorEditor.drives') }
                                 ].map(f => (
                                     <button
                                         key={f.id}
@@ -296,7 +304,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                             {loading ? (
                                 <div className="flex-1 flex items-center justify-center gap-3 text-slate-400">
                                     <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                                    Сканирование...
+                                    {t('sensorEditor.scan')}
                                 </div>
                             ) : error ? (
                                 <div className="flex-1 flex items-center justify-center text-red-400">{error}</div>
@@ -310,7 +318,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                                         const groupSources = allSources.filter(s => s._type === groupType);
                                         if (groupSources.length === 0) return null;
 
-                                        const groupTitle = groupType === 'hwmon' ? 'Системные' : groupType === 'nvidia' ? 'Ускорители' : 'Накопители';
+                                        const groupTitle = groupType === 'hwmon' ? t('sensorEditor.systems') : groupType === 'nvidia' ? t('sensorEditor.accelerators') : t('sensorEditor.drives');
                                         const GroupIcon = groupType === 'hwmon' ? '🖥️' : groupType === 'nvidia' ? '🎮' : '💾';
 
                                         return (
@@ -381,7 +389,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                                     {allSources.length === 0 && (
                                         <div className="h-full flex flex-col items-center justify-center text-slate-500">
                                             <span className="text-xl opacity-50">🔍</span>
-                                            <span className="text-sm mt-1">Нет доступных датчиков</span>
+                                            <span className="text-sm mt-1">{t('sensorEditor.noSensors')}</span>
                                         </div>
                                     )}
                                 </div>
@@ -389,7 +397,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                         </div>
                     </div>
                     <div className="mt-2 text-xs text-slate-500 text-right">
-                        Выбрано: <span className="text-slate-300">{selectedSources.length}</span>
+                        {t('sensorEditor.selected')} <span className="text-slate-300">{selectedSources.length}</span>
                     </div>
                 </div>
 
@@ -399,7 +407,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 text-slate-400 hover:text-white transition-colors text-sm font-medium"
                     >
-                        Отмена
+                        {t('common.cancel')}
                     </button>
                     <button
                         onClick={handleSave}
@@ -407,7 +415,7 @@ export const SensorEditor: React.FC<SensorEditorProps> = ({
                         className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
                     >
                         {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                        Сохранить
+                        {t('common.save')}
                     </button>
                 </div>
             </div>
