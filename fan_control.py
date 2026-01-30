@@ -155,12 +155,37 @@ def main():
                     
                     current_mode = sm.update(logic_values)
                 
-                # Find target from profile using mode index
+
+                # Find target from profile or manual override
                 target = 0
-                if group.get('profiles') and str(current_mode).isdigit():
-                    idx = int(current_mode)
-                    if 0 <= idx < len(group['profiles']):
-                        target = group['profiles'][idx]['target']
+                
+                if override['enabled']:
+                    # Manual Mode: Check if mode is a Profile Index first
+                    if group.get('profiles') and str(current_mode).isdigit():
+                        idx = int(current_mode)
+                        if 0 <= idx < len(group['profiles']):
+                            target = group['profiles'][idx]['target']
+                            logger.info(f"Manual Mode: Group={gid}, Profile[{idx}]='{group['profiles'][idx]['name']}', Target={target}")
+                        else:
+                             # Not a valid index, treat as raw target
+                             try:
+                                target = int(current_mode)
+                             except:
+                                target = 0
+                             logger.info(f"Manual Mode: Group={gid}, Input={current_mode}, Raw Target={target}")
+                    else:
+                        # No profiles or non-digit mode, treat as raw
+                        try:
+                            target = int(current_mode)
+                        except:
+                            target = 0
+                        logger.info(f"Manual Mode: Group={gid}, Input={current_mode}, Raw Target={target}")
+                else:
+                    # Auto Mode: Treat mode as Profile Index
+                    if group.get('profiles') and str(current_mode).isdigit():
+                        idx = int(current_mode)
+                        if 0 <= idx < len(group['profiles']):
+                            target = group['profiles'][idx]['target']
                 
                 api_data['logic'][gid] = {
                     'mode': current_mode,

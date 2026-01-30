@@ -93,11 +93,30 @@ WantedBy=multi-user.target
 
 ```bash
 # /etc/X11/xorg.conf
+
+# Отключаем авто-поиск устройств ввода (мышь/клавиатура не нужны)
+Section "ServerLayout"
+    Identifier     "Layout0"
+    Option         "AutoAddDevices" "false"
+    Option         "AutoEnableDevices" "false"
+EndSection
+
+# Основная секция для Nvidia
 Section "Device"
-    Identifier "NVIDIA"
-    Driver "nvidia"
-    Option "Coolbits" "4"
-    Option "AllowEmptyInitialConfiguration" "true"
+    Identifier     "Device0"
+    Driver         "nvidia"
+    Option         "Coolbits" "4"
+    Option         "AllowEmptyInitialConfiguration" "true"
+    # BusID "PCI:195:0:0" # Раскомментируйте и укажите, если более 1 GPU (lspci | grep VGA)
+EndSection
+
+Section "Screen"
+    Identifier     "Screen0"
+    Device         "Device0"
+    DefaultDepth    24
+    SubSection     "Display"
+        Depth       24
+    EndSubSection
 EndSection
 ```
 
@@ -120,7 +139,29 @@ npm run build
 cd ..
 
 # Настройка systemd сервиса
-cp fan-control.service /etc/systemd/system/
+
+```bash
+# /etc/systemd/system/fan-control.service
+[Unit]
+Description=Fan Control Daemon with Web UI
+After=network.target headless-x.service
+Wants=headless-x.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /root/monitor/fan_control.py
+WorkingDirectory=/root/monitor
+Environment="DISPLAY=:0"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# Активация сервиса
+cp fan-control.service /etc/systemd/system/ # Или создайте файл вручную
 systemctl daemon-reload
 systemctl enable --now fan-control
 ```

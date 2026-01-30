@@ -86,7 +86,7 @@ const SourceItem: React.FC<{
                 </div>
 
                 {/* Sparkline Background for Drives */}
-                <div className={`absolute bottom-0 right-0 w-28 h-12 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none z-0 ${sparkColorClass}`}>
+                <div className={`absolute bottom-0 left-0 right-0 h-12 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none z-0 ${sparkColorClass}`}>
                     <Sparkline data={sparkData} width={100} height={50} strokeWidth={2} />
                 </div>
             </div>

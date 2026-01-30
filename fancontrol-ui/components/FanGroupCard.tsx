@@ -119,7 +119,7 @@ export const FanGroupCard: React.FC<FanGroupCardProps> = ({
 
             {/* Loading Overlay */}
             {loading && (
-                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-xl">
                     <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-slate-300 text-sm">Применяется...</span>
