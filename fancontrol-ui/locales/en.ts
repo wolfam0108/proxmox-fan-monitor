@@ -93,6 +93,13 @@ export const en = {
             drives: "Drives",
             noFans: "No fans in this group"
         },
+        card: {
+            mode: "Mode",
+            fan: "Fan",
+            rpm: "RPM",
+            target: "Target",
+            status: "Status"
+        },
         app: {
             title: "FAN CONTROL MANAGER",
             subtitle: "Daemon connected • Polling every 1s",

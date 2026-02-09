@@ -253,25 +253,52 @@ class FanControlHandler(SimpleHTTPRequestHandler):
             
             # Validate that group exists in config
             valid_group_ids = [g['id'] for g in config.current_config.get('fan_groups', [])]
-            if override_type not in valid_group_ids:
-                self.send_json({'success': False, 'error': f'Invalid group: {override_type}'}, 400)
+            # Validate that group exists in config
+            valid_group_ids = [g['id'] for g in config.current_config.get('fan_groups', [])]
+            
+            if not override_type:
+                self.send_json({'error': 'Missing type'}, 400)
                 return
-            
-            # Initialize override for group if not exists
+
+            if override_type not in valid_group_ids:
+                 # If we are strict, return error. But maybe we want to allow it if config is empty?
+                 # For safety, let's warn but proceed or return error?
+                 # If config is empty, valid_group_ids is empty. Then we can't override anything.
+                 # But we might need to initialize it?
+                 # Let's return error if not found, unless we want to allow dynamic creation?
+                 # Given user issues, let's be strict if config exists, but loose if empty?
+                 # Actually, the user had empty config.
+                 pass
+
+            # Ensure runtime_override is initialized
+            if config.runtime_override is None:
+                config.runtime_override = {}
+                
+            # Ensure entry exists for this group
             if override_type not in config.runtime_override:
-                config.runtime_override[override_type] = {'enabled': False, 'mode': '0'}
-            
-            config.runtime_override[override_type]['enabled'] = data.get('enabled', False)
-            if 'mode' in data:
-                config.runtime_override[override_type]['mode'] = str(data['mode'])
-            
-            if data.get('save', False):
-                config.save_config()
-            
-            self.send_json({
-                'success': True, 
-                'override': config.runtime_override
-            })
+                 config.runtime_override[override_type] = {'enabled': False, 'mode': '0'}
+
+            try:
+                config.runtime_override[override_type]['enabled'] = data.get('enabled', False)
+                if 'mode' in data:
+                    config.runtime_override[override_type]['mode'] = str(data['mode'])
+                
+                # If save requested, save config. BUT verify we have valid config first!
+                if data.get('save', False):
+                    # Don't save if config seems empty/corrupt to avoid overwriting good config with bad state?
+                    # Actually, saving override state to File is what we wanted to AVOID for manual mode persistence.
+                    # So we should probably NOT save here unless it's an explicit "Set Default" action?
+                    # user expectation: "Save" in UI persists across reboots.
+                    # "Manual Mode" usually is temporary.
+                    # Reverting: we fixed save_config to NOT destroy runtime state.
+                    # So calling save_config() here is safe IF config is valid.
+                    config.save_config()
+                    
+                self.send_json({'status': 'ok'}, 200)
+            except Exception as e:
+                import logging
+                logging.error(f"Error handling override: {e}", exc_info=True)
+                self.send_json({'error': str(e)}, 500)
         except Exception as e:
             import traceback
             traceback.print_exc()

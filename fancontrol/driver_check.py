@@ -29,3 +29,41 @@ def check_nvidia_driver():
         return False, 0
     except Exception:
         return False, 0
+
+
+def check_service_status(service_name):
+    """
+    Check if a systemd service is active.
+    Returns:
+        bool: True if active, False otherwise
+        str: Detailed status string
+    """
+    try:
+        result = subprocess.run(
+            ['systemctl', 'is-active', service_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=2
+        )
+        status = result.stdout.strip()
+        return status == 'active', status
+    except:
+        return False, 'error'
+
+
+def is_x_server_available(display=":0"):
+    """
+    Check if X server is accessible.
+    """
+    try:
+        # Check if xdpyinfo or similar is available or use nvidia-settings -q
+        result = subprocess.run(
+            ['nvidia-settings', '-c', display, '-q', 'GPUCoreTemp'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2
+        )
+        return result.returncode == 0
+    except:
+        return False

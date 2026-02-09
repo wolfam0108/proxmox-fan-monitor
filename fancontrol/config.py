@@ -22,7 +22,9 @@ DEFAULT_CONFIG = {
     'override': {},
     'drives': {
         'monitored': []
-    }
+    },
+    'sensors': [],
+    'cpu_sensor_path': ''
 }
 
 
@@ -120,13 +122,19 @@ def profiles_to_legacy_format(group):
         'TARGETS': targets,
         'THRESHOLDS': thresholds,
         'DELAY_UP': group.get('delay_up', 5),
-        'HOLD_TIME': hold_time
+        'HOLD_TIME': hold_time,
+        'HYSTERESIS': group.get('hysteresis', 2.0)
     }
 
 
 def load_config():
     """Load config from JSON file or use defaults"""
     global runtime_override, current_config
+    
+    # Backup existing overrides to preserve manual mode during reload
+    existing_overrides = {}
+    if 'runtime_override' in globals() and runtime_override:
+        existing_overrides = runtime_override.copy()
     
     if CONFIG_FILE.exists():
         try:
@@ -147,7 +155,7 @@ def load_config():
             
             current_config = cfg
             
-            # Load overrides for each group
+            # Load overrides for each group from file (defaults)
             runtime_override = {}
             for group in cfg.get('fan_groups', []):
                 group_id = group['id']
@@ -157,8 +165,14 @@ def load_config():
                     'mode': str(ovr.get('mode', 0))
                 }
             
+            # Restore active runtime overrides from backup
+            for gid, ovr in existing_overrides.items():
+                if gid in runtime_override:
+                    runtime_override[gid] = ovr
+            
             print(f"Config loaded from {CONFIG_FILE}")
             print(f"  Fan groups: {[g['name'] for g in cfg.get('fan_groups', [])]}")
+
         except Exception as e:
             print(f"Error loading config: {e}, using defaults")
             current_config = DEFAULT_CONFIG.copy()
@@ -183,30 +197,41 @@ def _init_runtime_override():
         }
 
 
+def deep_clean_config(data):
+    """Recursively remove volatile or temporary fields from config data for saving"""
+    if isinstance(data, dict):
+        # Fields to remove
+        volatile_fields = ['current_value', 'cached_info', 'temp', 'value', 'sources', 'status']
+        return {k: deep_clean_config(v) for k, v in data.items() if k not in volatile_fields}
+    elif isinstance(data, list):
+        return [deep_clean_config(item) for item in data]
+    return data
+
+
 def save_config(config=None):
     """Save current config to JSON file"""
-    global current_config, runtime_override
+    global current_config
     
     if config is None:
         config = current_config if current_config else DEFAULT_CONFIG
     
     current_config = config
     
-    # Sync runtime override
-    if 'override' in config:
-        for group_id, ovr in config['override'].items():
-            runtime_override[group_id] = {
-                'enabled': ovr.get('enabled', False),
-                'mode': str(ovr.get('mode', 0))
-            }
+    # Ensure cpu_sensor_path is synced from sensors list for legacy compatibility
+    cpu_sensor = next((s for s in config.get('sensors', []) if s['id'] == 'cpu'), None)
+    if cpu_sensor and cpu_sensor.get('paths'):
+        config['cpu_sensor_path'] = cpu_sensor['paths'][0]
     
-    # Filter out legacy fields that are added by get_current_config for API compatibility
-    # Only save core config fields
+    # Filter out legacy fields and volatile runtime data
     core_fields = ['fan_groups', 'override', 'drives', 'sensors', 'cpu_sensor_path']
-    config_to_save = {k: v for k, v in config.items() if k in core_fields}
+    config_to_save = {k: config[k] for k in core_fields if k in config}
+    
+    # Deep clean to remove current temperatures and cached hardware info
+    config_to_save = deep_clean_config(config_to_save)
     
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config_to_save, f, indent=2, ensure_ascii=False)
+
 
 
 def add_fan_group(group):

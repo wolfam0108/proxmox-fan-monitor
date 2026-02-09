@@ -14,16 +14,16 @@ def detect_display() -> str:
     Detect the X display to use for nvidia-settings.
     Returns ':0' by default, or attempts to find active display.
     """
+    # Check if nvidia-settings is available
+    from shutil import which
+    if which('nvidia-settings') is None:
+        return ':0'
+
     # Try common displays
     for display in [':0', ':1', ':2']:
         try:
-            result = subprocess.run(
-                ['nvidia-settings', '-c', display, '-q', 'GPUCoreTemp'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=3
-            )
-            if result.returncode == 0:
+            from .driver_check import is_x_server_available
+            if is_x_server_available(display):
                 return display
         except:
             continue
@@ -53,6 +53,12 @@ def get_fan_count(gpu_index: int = 0, display: str = ':0') -> int:
     Tries querying fans until one fails.
     """
     fan_count = 0
+    
+    # Check if nvidia-settings is available
+    from shutil import which
+    if which('nvidia-settings') is None:
+        return 0
+
     for i in range(10):  # Max 10 fans per GPU
         try:
             result = subprocess.run(
@@ -86,6 +92,12 @@ def scan_nvidia_gpus() -> List[Dict]:
     }
     """
     gpus = []
+    
+    # Check if nvidia-smi is available
+    from shutil import which
+    if which('nvidia-smi') is None:
+        return []
+
     display = detect_display()
     
     try:
@@ -110,24 +122,34 @@ def scan_nvidia_gpus() -> List[Dict]:
             if len(parts) < 4:
                 continue
             
-            gpu_index = int(parts[0])
-            gpu_name = parts[1]
-            gpu_uuid = parts[2]
-            gpu_temp = int(parts[3]) if parts[3].isdigit() else 0
-            
-            # Get fan count for this GPU
-            fan_count = get_fan_count(gpu_index, display)
-            fan_indices = list(range(fan_count))
-            
-            gpus.append({
-                'index': gpu_index,
-                'name': gpu_name,
-                'uuid': gpu_uuid,
-                'fans': fan_indices,
-                'fan_count': fan_count,
-                'temperature': gpu_temp,
-                'display': display
-            })
+            try:
+                gpu_index = int(parts[0])
+                gpu_name = parts[1]
+                gpu_uuid = parts[2]
+                gpu_temp = int(parts[3]) if parts[3].isdigit() else 0
+                
+                # Get fan count for this GPU
+                # If Xorg is not available, we might not be able to get fan count via nvidia-settings
+                # Default to 0 fans if detection fails, or try simple heuristic
+                fan_count = get_fan_count(gpu_index, display)
+                
+                # If no fans detected via nvidia-settings, maybe we can assume at least 1 if it's a discrete GPU?
+                # But safer to trust detection. If 0, it means no control.
+                
+                fan_indices = list(range(fan_count))
+                
+                gpus.append({
+                    'index': gpu_index,
+                    'name': gpu_name,
+                    'uuid': gpu_uuid,
+                    'fans': fan_indices,
+                    'fan_count': fan_count,
+                    'temperature': gpu_temp,
+                    'display': display
+                })
+            except ValueError:
+                continue
+                
     except Exception as e:
         print(f"Error scanning GPUs: {e}")
     

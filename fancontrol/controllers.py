@@ -115,6 +115,12 @@ class GPUFanController:
     def set_speed_pct(self, target_pct):
         target_pct = max(0, min(100, int(target_pct)))
         
+        # Check if nvidia-settings is available
+        from shutil import which
+        if which('nvidia-settings') is None:
+            # Cannot control fans without nvidia-settings
+            return
+
         # If target is 0, revert to Auto (Driver) control
         if target_pct == 0:
              self.reset()
@@ -125,24 +131,34 @@ class GPUFanController:
             if self.actual_pct > 0:
                 self.current_pct = self.actual_pct
 
-        # Force Enable Manual Control EVERY TIME to ensure it sticks
-        # Some drivers/cards might silently revert or need re-assertion
-        subprocess.run(
-            ['nvidia-settings', '-c', self.display, '-a', 
-                f'[gpu:{self.gpu_index}]/GPUFanControlState=1'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        self.is_manual_active = True
-        
-        # Build command with all configured fans
-        cmd = ['nvidia-settings', '-c', self.display]
-        for fan_idx in self.fan_indices:
-            cmd.extend(['-a', f'[fan:{fan_idx}]/GPUTargetFanSpeed={target_pct}'])
-        
-        # Log the change for debugging
-        print(f"DEBUG: GPU Fan Setting {target_pct}%")
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.current_pct = target_pct
+        try:
+            # Check if X server is accessible
+            from .driver_check import is_x_server_available
+            if not is_x_server_available(self.display):
+                # print(f"DEBUG: X Server {self.display} not available. Skipping GPU fan control.")
+                return
+
+            # Force Enable Manual Control EVERY TIME to ensure it sticks
+            subprocess.run(
+                ['nvidia-settings', '-c', self.display, '-a', 
+                    f'[gpu:{self.gpu_index}]/GPUFanControlState=1'],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=2
+            )
+            self.is_manual_active = True
+            
+            # Build command with all configured fans
+            cmd = ['nvidia-settings', '-c', self.display]
+            for fan_idx in self.fan_indices:
+                cmd.extend(['-a', f'[fan:{fan_idx}]/GPUTargetFanSpeed={target_pct}'])
+            
+            # Log the change for debugging
+            # print(f"DEBUG: GPU Fan Setting {target_pct}%")
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+            self.current_pct = target_pct
+        except Exception as e:
+            # print(f"Error setting GPU fan speed: {e}")
+            pass
 
     def set_target_rpm(self, rpm):
         self.target_rpm = int(rpm)

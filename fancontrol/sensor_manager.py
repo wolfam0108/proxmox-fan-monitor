@@ -14,6 +14,7 @@ import json
 import glob
 import os
 from typing import List, Dict, Optional, Any
+from concurrent.futures import ThreadPoolExecutor
 
 
 # Sensor visual presets
@@ -39,18 +40,32 @@ def format_size(size_bytes: int) -> str:
 def get_drive_details(device_path: str) -> Dict:
     """Get detailed drive info via smartctl."""
     try:
-        # Use -a to get all info, -j for JSON
-        # smartctl returns bitmask exit codes (e.g. 64), so check_output might fail
-        # but stdout will still contain the JSON.
+        o = b'{}'
         try:
+            # Use -a to get all info, -j for JSON
+            # Use -n standby to return exit 2 if drive is sleeping (avoid spinup)
+            # smartctl returns bitmask exit codes (e.g. 64), so check_output might fail
+            # but stdout will still contain the JSON.
             o = subprocess.check_output(
-                ['smartctl', '-j', '-a', device_path],
-                stderr=subprocess.DEVNULL, timeout=5
+                ['smartctl', '-j', '-n', 'standby', '-a', device_path],
+                stderr=subprocess.DEVNULL, timeout=2
             )
         except subprocess.CalledProcessError as e:
+            # Exit code 2 means device is in standby (if -n used)
+            # In this case smartctl produces no output.
+            if e.returncode == 2:
+                 return {}
             o = e.output
+        except subprocess.TimeoutExpired:
+            return {}  # Timeout, skip drive
             
-        j = json.loads(o)
+        try:
+            j = json.loads(o)
+        except json.JSONDecodeError:
+            return {}
+            j = json.loads(o)
+        except json.JSONDecodeError:
+            return {}
         
         # 1. Info / Model / Serial
         model = j.get('model_name', '')
@@ -212,41 +227,89 @@ def scan_nvidia_sensors() -> List[Dict]:
     return sensors
 
 
+def scan_single_drive(device_info: Dict) -> Optional[Dict]:
+    """Helper to scan a single drive from lsblk info."""
+    try:
+        name = device_info.get('name')
+        dev_type = device_info.get('type')
+        
+        if not name or dev_type != 'disk':
+            return None
+        
+        device_path = f'/dev/{name}'
+        
+        if not name or dev_type != 'disk':
+            return None
+        
+        device_path = f'/dev/{name}'
+        
+        # Get details via smartctl helper
+        details = get_drive_details(device_path)
+        
+        if details:
+             # Use smartctl details if available
+             model = details.get('model') or name
+             serial = details.get('serial') or 'Unknown'
+             temp = details.get('temp')
+        else:
+             # Smartctl failed! This likely means the drive is dead or disconnected.
+             # User requested "panic" behavior or at least explicit failure indication.
+             # We shouldn't mask it with lsblk data.
+             model = f"⚠️ FAILED: {name}"
+             serial = 'Unknown'
+             temp = None 
+             details = {
+                 'model': model,
+                 'serial': serial,
+                 'size': 'Error',
+                 'form_factor': 'Unknown',
+                 'interface': 'Unknown',
+                 'type': 'Unknown',
+                 'temp': None,
+                 'status': 'critical', # Custom flag for UI if we supported it
+                 'error': 'Smartctl failed to read device'
+             }
+
+        # Always return sensor dict
+        return {
+            'source': 'drive',
+            'device': device_path,
+            'serial': serial, 
+            'label': model,
+            'value': temp,
+            'details': details, 
+            'suggested_preset': 'storage'
+        }
+    except Exception:
+        pass
+    return None
+
 def scan_drive_sensors() -> List[Dict]:
-    """Scan drive temperature sensors via smartctl."""
+    """Scan drive temperature sensors via smartctl (Parallel)."""
     sensors = []
     
     # Find all block devices
     try:
-        lsblk = subprocess.check_output(
-            ['lsblk', '-d', '-n', '-o', 'NAME,TYPE'],
+        # Use -o NAME,TYPE,SIZE,MODEL,TRAN,ROTA to get details in JSON
+        lsblk_out = subprocess.check_output(
+            ['lsblk', '-J', '-d', '-o', 'NAME,TYPE,SIZE,MODEL,TRAN,ROTA'],
             stderr=subprocess.DEVNULL
         ).decode().strip()
         
-        for line in lsblk.split('\n'):
-            parts = line.split()
-            if len(parts) >= 2:
-                name = parts[0]
-                dev_type = parts[1]
-                
-                if dev_type != 'disk':
-                    continue
-                
-                device_path = f'/dev/{name}'
-                
-                # Get details via smartctl helper
-                details = get_drive_details(device_path)
-                
-                if details and details.get('temp') is not None:
-                    sensors.append({
-                        'source': 'drive',
-                        'device': device_path,
-                        'serial': details['serial'],
-                        'label': details['model'] or name,
-                        'value': details['temp'],
-                        'details': details, # Include full details
-                        'suggested_preset': 'storage'
-                    })
+        try:
+            data = json.loads(lsblk_out)
+            devices = data.get('blockdevices', [])
+        except json.JSONDecodeError:
+            devices = []
+        
+        # Run scan in parallel
+        # Max wrokers = number of drives (usually < 20), so let's set a reasonable limit e.g. 16
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            results = list(executor.map(scan_single_drive, devices))
+            
+        # Filter out None results
+        sensors = [r for r in results if r]
+            
     except:
         pass
     

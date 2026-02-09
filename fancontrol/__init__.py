@@ -39,5 +39,6 @@ from .state_manager import AutoStateManager
 from .web import start_http_server, current_state, history_logger, LOG_INTERVAL
 from .fan_scanner import scan_all, test_pwm
 
-# Load config on package import
-load_config()
+# Config is loaded explicitly in main script
+# load_config()
+

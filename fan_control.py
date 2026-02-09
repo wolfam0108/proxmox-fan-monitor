@@ -6,14 +6,46 @@ import signal
 import sys
 import os
 import json
-import signal
-import sys
-import os
+import fcntl
 
 # Ensure script directory is in path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fancontrol import config, sensors, controllers, web, state_manager, sensor_manager
+
+
+LOCK_FILE = '/root/monitor/fan_control.pid'
+
+def check_lock():
+    """Ensure only one instance is running"""
+    try:
+        # Open in r+ to not truncate if we fail to lock
+        # Create if doesn't exist
+        if not os.path.exists(LOCK_FILE):
+             open(LOCK_FILE, 'w').close()
+             
+        lock_file = open(LOCK_FILE, 'r+')
+        fcntl.lockf(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # We got the lock! Clean and write our PID
+        lock_file.seek(0)
+        lock_file.truncate()
+        lock_file.write(str(os.getpid()))
+        lock_file.flush()
+        
+        logger.info(f"Process PID lock acquired: {os.getpid()}")
+        return lock_file
+    except IOError:
+        # Try to read who owns it
+        try:
+            with open(LOCK_FILE, 'r') as f:
+                existing_pid = f.read().strip()
+            print(f"CRITICAL: Another instance (PID {existing_pid}) is already running. Exiting.")
+        except:
+            print("CRITICAL: Another instance is already running. Exiting.")
+        sys.exit(1)
+
+
 
 # Configure logging
 logging.basicConfig(
@@ -60,13 +92,23 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
+    # Ensure only one instance is running
+    lock_fd = check_lock()
+    
     logger.info("Starting Fan Control Service")
+
     
     # Start Web Server in background
     web_thread = threading.Thread(target=web.start_http_server, daemon=True)
     web_thread.start()
     logger.info("Web server started")
     
+    # Load configuration
+    try:
+        config.load_config()
+    except Exception as e:
+        logger.error(f"Failed to load config on startup: {e}")
+
     # Initialize controllers and state managers per group
     state_managers = {}
     fan_controllers = {}
@@ -81,10 +123,19 @@ def main():
                 time.sleep(1)
                 continue
             
+            # 0. Check service health
+            from fancontrol.driver_check import check_service_status
+            headless_active, headless_status = check_service_status('headless-x.service')
+            
             # 1. Read all sensors
             configured_sensors = cfg.get('sensors', [])
             # sensor_values is now {id: {'value': float, 'sources': [...]}}
+            logger.debug("Reading sensors...")
+            t_start = time.time()
             sensor_data_map = sensor_manager.get_all_sensor_values(configured_sensors)
+            t_end = time.time()
+            if t_end - t_start > 1.0:
+                 logger.warning(f"Sensor reading took {t_end - t_start:.2f}s")
             
             # Helper to extract simpler value map for logic
             simple_sensor_values = {k: v['value'] for k, v in sensor_data_map.items() if v['value'] is not None}
@@ -97,6 +148,12 @@ def main():
             # Initialize API data structure
             api_data = {
                 'timestamp': time.time(),
+                'health': {
+                    'headless-x': {
+                        'active': headless_active,
+                        'status': headless_status
+                    }
+                },
                 'temps': {
                     'cpu': cpu_temp,
                     'gpu': gpu_temp,
@@ -125,6 +182,7 @@ def main():
             fan_groups = cfg.get('fan_groups', [])
             for group in fan_groups:
                 gid = group['id']
+                is_nvidia_group = any(f.get('type') == 'nvidia' for f in group.get('fans', []))
                 
                 # Check runtime override
                 override = config.runtime_override.get(gid, {'enabled': False, 'mode': '0'})
@@ -140,6 +198,12 @@ def main():
                 sm.config = config.profiles_to_legacy_format(group)
                 sm.mode_keys = sorted(sm.config['THRESHOLDS'].keys(), key=lambda x: int(x), reverse=True)
                 
+                status_warning = None
+                if is_nvidia_group and not headless_active:
+                    status_warning = "Headless-X Offline (Monitor Only)"
+                    # We might want to force a safer mode or just inhibit control
+                    # For now, we'll let the controllers fail gracefully, but signal it here.
+
                 if override['enabled']:
                     current_mode = str(override['mode'])
                     sm.current_mode = current_mode
@@ -149,13 +213,18 @@ def main():
                     # 1. Start with dedicated sensor values
                     logic_values = simple_sensor_values.copy()
                     # 2. Add legacy aggregate values for backward compatibility
-                    logic_values['cpu'] = cpu_temp
-                    logic_values['gpu'] = gpu_temp
-                    logic_values['hdd'] = hdd_temp
+                    # Only overwrite if not present or if current value is invalid/zero and we have a valid legacy value
+                    if 'cpu' not in logic_values or (logic_values.get('cpu', 0) == 0 and cpu_temp > 0):
+                        logic_values['cpu'] = cpu_temp
+                    
+                    if 'gpu' not in logic_values or (logic_values.get('gpu', 0) == 0 and gpu_temp > 0):
+                        logic_values['gpu'] = gpu_temp
+                        
+                    if 'hdd' not in logic_values or (logic_values.get('hdd', 0) == 0 and hdd_temp > 0):
+                        logic_values['hdd'] = hdd_temp
                     
                     current_mode = sm.update(logic_values)
                 
-
                 # Find target from profile or manual override
                 target = 0
                 
@@ -187,12 +256,17 @@ def main():
                         if 0 <= idx < len(group['profiles']):
                             target = group['profiles'][idx]['target']
                 
+                status_msg = sm.status_msg
+                if status_warning:
+                    status_msg = f"{status_warning} | {status_msg}"
+
                 api_data['logic'][gid] = {
                     'mode': current_mode,
                     'target': target,
-                    'status': sm.status_msg,
+                    'status': status_msg,
                     'isManual': override['enabled'],
-                    'groupName': group.get('name', gid)
+                    'groupName': group.get('name', gid),
+                    'isDegraded': status_warning is not None
                 }
 
                 # Apply to fans

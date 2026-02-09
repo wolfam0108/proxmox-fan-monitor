@@ -13,7 +13,7 @@ i18n
             en: en
         },
         fallbackLng: 'ru',
-        debug: true, // Helpful for debugging missing keys
+        debug: false, // Helpful for debugging missing keys
         interpolation: {
             escapeValue: false, // React already safe from XSS
         },

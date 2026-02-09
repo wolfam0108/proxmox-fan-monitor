@@ -146,6 +146,7 @@ cd ..
 # /etc/systemd/system/fan-control.service
 [Unit]
 Description=Fan Control Daemon with Web UI
+# Используем After для мягкой зависимости, чтобы сервис не падал при проблемах с X-сервером
 After=network.target headless-x.service
 Wants=headless-x.service
 
@@ -154,6 +155,7 @@ Type=simple
 ExecStart=/usr/bin/python3 /root/monitor/fan_control.py
 WorkingDirectory=/root/monitor
 Environment="DISPLAY=:0"
+Environment="PYTHONUNBUFFERED=1"
 Restart=always
 RestartSec=5
 

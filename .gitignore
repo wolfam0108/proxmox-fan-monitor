@@ -30,3 +30,4 @@ Thumbs.db
 
 # Grafana (removed)
 grafana_dashboard.json
+fan_control.pid
